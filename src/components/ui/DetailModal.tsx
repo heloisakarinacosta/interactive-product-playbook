@@ -42,6 +42,59 @@ const DetailModal: React.FC<DetailModalProps> = ({
       editorRef.current.focus();
     }
   }, [editing, editedDescription]);
+
+  // Add paste event listener for handling image paste
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (!editing || !editorRef.current) return;
+      
+      // Check if the paste event contains image data
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      
+      let imageFile = null;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          imageFile = items[i].getAsFile();
+          break;
+        }
+      }
+      
+      if (imageFile) {
+        e.preventDefault(); // Prevent default paste behavior
+        
+        // Create a FileReader to read the image as a data URL
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result && editorRef.current) {
+            // Create an image element with the data URL
+            const img = document.createElement('img');
+            img.src = event.target.result as string;
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.className = 'my-2 rounded-md';
+            
+            // Insert the image at the current cursor position
+            document.execCommand('insertHTML', false, img.outerHTML);
+            toast.success('Imagem inserida com sucesso!');
+          }
+        };
+        reader.readAsDataURL(imageFile);
+      }
+    };
+    
+    // Add the paste event listener to the editor when in edit mode
+    if (editing && editorRef.current) {
+      editorRef.current.addEventListener('paste', handlePaste);
+    }
+    
+    // Cleanup function to remove the event listener
+    return () => {
+      if (editorRef.current) {
+        editorRef.current.removeEventListener('paste', handlePaste);
+      }
+    };
+  }, [editing]);
   
   const handleSave = () => {
     if (onUpdate) {
@@ -226,6 +279,9 @@ const DetailModal: React.FC<DetailModalProps> = ({
             >
               <List size={16} />
             </Button>
+            <div className="text-xs text-muted-foreground ml-auto pr-2">
+              Dica: Cole imagens diretamente no editor (Ctrl+V)
+            </div>
           </div>
         )}
         
