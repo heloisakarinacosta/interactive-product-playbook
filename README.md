@@ -1,69 +1,66 @@
-# Welcome to your Lovable project
 
-## Project info
+# Playbook de Produtos
 
-**URL**: https://lovable.dev/projects/f3ad6e8b-d80f-449e-b131-30c469e440fc
+Uma plataforma interativa para gerenciar e visualizar produtos, itens, subitens e cenários.
 
-## How can I edit this code?
+## Requisitos
 
-There are several ways of editing your application.
+- Node.js (v14+)
+- MariaDB (v10+)
 
-**Use Lovable**
+## Configuração do Banco de Dados
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/f3ad6e8b-d80f-449e-b131-30c469e440fc) and start prompting.
+1. Instale o MariaDB em seu servidor.
+2. Configure os parâmetros de conexão no arquivo `src/config/db.config.ts`:
+   - host (padrão: localhost)
+   - user (padrão: root)
+   - password (defina sua senha)
+   - database (padrão: playbook_produtos)
+   - port (padrão: 3306)
 
-Changes made via Lovable will be committed automatically to this repo.
+3. Execute o script de inicialização do banco de dados:
+   ```
+   npx ts-node src/scripts/setupDatabase.ts
+   ```
 
-**Use your preferred IDE**
+## Acesso ao Sistema
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- Usuário administrador padrão:
+  - Login: admin
+  - Senha: 01928374
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Estrutura do Banco de Dados
 
-Follow these steps:
+O sistema utiliza as seguintes tabelas:
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1. `users` - Usuários do sistema
+2. `access_logs` - Registros de acesso
+3. `products` - Produtos cadastrados
+4. `items` - Itens de produtos
+5. `subitems` - Subitens de itens de produtos
+6. `scenarios` - Cenários
+7. `scenario_items` - Relação entre cenários e itens
+8. `scenario_subitems` - Visibilidade de subitens em cenários
+9. `menus` - Itens do menu do sistema
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## Desenvolvimento
 
-# Step 3: Install the necessary dependencies.
-npm i
+Para iniciar o servidor de desenvolvimento:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Produção
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Para compilar para produção:
 
-**Use GitHub Codespaces**
+```
+npm run build
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Para iniciar o servidor em produção:
 
-## What technologies are used for this project?
-
-This project is built with .
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/f3ad6e8b-d80f-449e-b131-30c469e440fc) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+```
+npm start
+```
