@@ -1,6 +1,6 @@
 
 import mysql from 'mysql2/promise';
-import { dbConfig } from '../config/db.config';
+import { dbConfig, dbSetupScript } from '../config/db.config';
 import fs from 'fs';
 import path from 'path';
 
