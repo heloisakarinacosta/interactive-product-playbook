@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { Plus, Check, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import Carousel from '@/components/ui/Carousel';
+import Carousel from '@/components/ui/carousel';
 import ProductCard from '@/components/ui/ProductCard';
 import ItemCard, { Subitem } from '@/components/ui/ItemCard';
 import DetailModal from '@/components/ui/DetailModal';
