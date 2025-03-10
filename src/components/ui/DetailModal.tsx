@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { X, Pencil, Save, Bold, Italic, Link, Image, List } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -65,7 +66,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
       editorRef.current.innerHTML = editedDescription;
       editorRef.current.focus();
     }
-  }, [editing, editedDescription]);
+  }, [editing, editedDescription, editorRef]);
   
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -207,8 +208,8 @@ const DetailModal: React.FC<DetailModalProps> = ({
               ref={editorRef}
               contentEditable
               className="min-h-[200px] p-3 border rounded-md focus:outline-none focus:ring-1 focus:ring-primary overflow-auto"
-              onPaste={handlePaste as any}
-              onKeyDown={handleKeyDown as any}
+              onPaste={(e: React.ClipboardEvent<HTMLDivElement>) => handlePaste(e.nativeEvent)}
+              onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => handleKeyDown(e.nativeEvent)}
             />
           ) : (
             <div 

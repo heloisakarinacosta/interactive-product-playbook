@@ -17,7 +17,7 @@ export const useRichEditor = ({ initialContent, onChange }: UseRichEditorProps) 
     }
   }, [initialContent]);
 
-  const handlePaste = async (e: ClipboardEvent) => {
+  const handlePaste = (e: ClipboardEvent): void => {
     e.preventDefault();
     
     const items = Array.from(e.clipboardData?.items || []);
@@ -109,7 +109,7 @@ export const useRichEditor = ({ initialContent, onChange }: UseRichEditorProps) 
   };
 
   // Lidar com a tecla Enter
-  const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent): void => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       document.execCommand('insertHTML', false, '<br><br>');
