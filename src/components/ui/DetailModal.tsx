@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Pencil, Save, Bold, Italic, Link, Image, List } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -76,6 +75,11 @@ const DetailModal: React.FC<DetailModalProps> = ({
             
             // Insert the image at the current cursor position
             document.execCommand('insertHTML', false, img.outerHTML);
+            
+            // Save the current content to the editedDescription state after inserting
+            // This ensures the image is included in the state that will be saved
+            setEditedDescription(editorRef.current.innerHTML);
+            
             toast.success('Imagem inserida com sucesso!');
           }
         };
@@ -86,9 +90,24 @@ const DetailModal: React.FC<DetailModalProps> = ({
     // Add the paste event listener to the editor when in edit mode
     if (editing && editorRef.current) {
       editorRef.current.addEventListener('paste', handlePaste);
+      
+      // Add input event listener to capture all changes to the editor content
+      const handleInput = () => {
+        if (editorRef.current) {
+          setEditedDescription(editorRef.current.innerHTML);
+        }
+      };
+      
+      editorRef.current.addEventListener('input', handleInput);
+      
+      return () => {
+        if (editorRef.current) {
+          editorRef.current.removeEventListener('paste', handlePaste);
+          editorRef.current.removeEventListener('input', handleInput);
+        }
+      };
     }
     
-    // Cleanup function to remove the event listener
     return () => {
       if (editorRef.current) {
         editorRef.current.removeEventListener('paste', handlePaste);
@@ -119,6 +138,8 @@ const DetailModal: React.FC<DetailModalProps> = ({
     document.execCommand(command, false, value);
     if (editorRef.current) {
       editorRef.current.focus();
+      // Update editedDescription after formatting
+      setEditedDescription(editorRef.current.innerHTML);
     }
   };
   
@@ -141,6 +162,11 @@ const DetailModal: React.FC<DetailModalProps> = ({
       } else {
         const linkHtml = `<a href="${url}" target="_blank">${text}</a>`;
         document.execCommand('insertHTML', false, linkHtml);
+        
+        // Update editedDescription after inserting link
+        if (editorRef.current) {
+          setEditedDescription(editorRef.current.innerHTML);
+        }
       }
     }
   };
@@ -293,6 +319,12 @@ const DetailModal: React.FC<DetailModalProps> = ({
               contentEditable
               className="min-h-[200px] p-3 border rounded-md focus:outline-none focus:ring-1 focus:ring-primary overflow-auto"
               dangerouslySetInnerHTML={{ __html: editedDescription }}
+              onBlur={() => {
+                // Update state when editor loses focus
+                if (editorRef.current) {
+                  setEditedDescription(editorRef.current.innerHTML);
+                }
+              }}
             />
           ) : (
             <div 
