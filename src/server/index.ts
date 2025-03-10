@@ -5,6 +5,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { query, initDatabase } from '../utils/dbUtils';
+import { ResultSetHeader } from 'mysql2';
 
 // Get directory name in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -52,14 +53,13 @@ app.post('/api/products', async (req, res) => {
       [title, description]
     );
     
-    // Correção: o tipo ResultSetHeader[] não possui a propriedade insertId diretamente
-    // Precisamos acessar o primeiro elemento que contém o insertId
-    const resultHeader = Array.isArray(result) ? result[0] : result;
+    // Corrigido: verificamos explicitamente o tipo como ResultSetHeader para acessar insertId
+    const resultHeader = result as ResultSetHeader;
     const newProductId = resultHeader.insertId;
     
     const newProduct = await query('SELECT * FROM products WHERE id = ?', [newProductId]);
     
-    res.status(201).json(newProduct[0]);
+    res.status(201).json(Array.isArray(newProduct) ? newProduct[0] : newProduct);
   } catch (error) {
     console.error('Error creating product:', error);
     res.status(500).json({ error: 'Failed to create product' });
@@ -78,7 +78,7 @@ app.put('/api/products/:id', async (req, res) => {
     );
     
     const updated = await query('SELECT * FROM products WHERE id = ?', [id]);
-    res.json(updated[0]);
+    res.json(Array.isArray(updated) ? updated[0] : updated);
   } catch (error) {
     console.error('Error updating product:', error);
     res.status(500).json({ error: 'Failed to update product' });
@@ -108,12 +108,13 @@ app.post('/api/items', async (req, res) => {
       [product_id, title]
     );
     
-    const resultHeader = Array.isArray(result) ? result[0] : result;
+    // Corrigido: verificamos explicitamente o tipo como ResultSetHeader para acessar insertId
+    const resultHeader = result as ResultSetHeader;
     const newItemId = resultHeader.insertId;
     
     const newItem = await query('SELECT * FROM items WHERE id = ?', [newItemId]);
     
-    res.status(201).json(newItem[0]);
+    res.status(201).json(Array.isArray(newItem) ? newItem[0] : newItem);
   } catch (error) {
     console.error('Error creating item:', error);
     res.status(500).json({ error: 'Failed to create item' });
@@ -143,12 +144,13 @@ app.post('/api/subitems', async (req, res) => {
       [item_id, title, subtitle, description, last_updated_by]
     );
     
-    const resultHeader = Array.isArray(result) ? result[0] : result;
+    // Corrigido: verificamos explicitamente o tipo como ResultSetHeader para acessar insertId
+    const resultHeader = result as ResultSetHeader;
     const newSubitemId = resultHeader.insertId;
     
     const newSubitem = await query('SELECT * FROM subitems WHERE id = ?', [newSubitemId]);
     
-    res.status(201).json(newSubitem[0]);
+    res.status(201).json(Array.isArray(newSubitem) ? newSubitem[0] : newSubitem);
   } catch (error) {
     console.error('Error creating subitem:', error);
     res.status(500).json({ error: 'Failed to create subitem' });
@@ -166,7 +168,7 @@ app.put('/api/subitems/:id', async (req, res) => {
     );
     
     const updated = await query('SELECT * FROM subitems WHERE id = ?', [id]);
-    res.json(updated[0]);
+    res.json(Array.isArray(updated) ? updated[0] : updated);
   } catch (error) {
     console.error('Error updating subitem:', error);
     res.status(500).json({ error: 'Failed to update subitem' });

@@ -1,13 +1,13 @@
 
 import mysql from 'mysql2/promise';
-import { config } from '../config/db.config';
+import { dbConfig } from '../config/db.config';
 
 // Create connection pool
 const pool = mysql.createPool({
-  host: config.HOST,
-  user: config.USER,
-  password: config.PASSWORD,
-  database: config.DB,
+  host: dbConfig.host,
+  user: dbConfig.user,
+  password: dbConfig.password,
+  database: dbConfig.database,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
