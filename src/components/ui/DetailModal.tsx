@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Pencil, Save, Bold, Italic, Link, Image, List } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -42,20 +43,35 @@ const DetailModal: React.FC<DetailModalProps> = ({
     }
   }, [editing, editedDescription]);
 
-  // Handle the enter key in the editor - FIXED
+  // Handle the enter key in the editor
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!editing || !editorRef.current) return;
       
       if (e.key === 'Enter') {
-        // Prevent default behavior to stop cursor from going to start of line
         e.preventDefault();
         
-        // Insert HTML break at cursor position
-        document.execCommand('insertHTML', false, '<br>');
+        // Get selection
+        const selection = window.getSelection();
+        const range = selection?.getRangeAt(0);
         
-        // Update edited description with new content
-        if (editorRef.current) {
+        if (range) {
+          // Create and insert line break
+          const br = document.createElement('br');
+          range.deleteContents();
+          range.insertNode(br);
+          
+          // Create a text node with a zero-width space to position cursor after the break
+          const textNode = document.createTextNode('\u200B');
+          range.insertNode(textNode);
+          
+          // Position cursor after the inserted nodes
+          range.setStartAfter(textNode);
+          range.setEndAfter(textNode);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+          
+          // Update the edited description
           setEditedDescription(editorRef.current.innerHTML);
         }
         
@@ -63,7 +79,6 @@ const DetailModal: React.FC<DetailModalProps> = ({
       }
     };
     
-    // Add event listener for keydown
     if (editing && editorRef.current) {
       editorRef.current.addEventListener('keydown', handleKeyDown);
       
