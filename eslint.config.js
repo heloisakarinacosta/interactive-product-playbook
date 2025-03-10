@@ -1,3 +1,4 @@
+
 import js from "@eslint/js";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
@@ -21,9 +22,15 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": [
         "warn",
-        { allowConstantExport: true },
+        { 
+          allowConstantExport: true,
+          checkJS: false
+        },
       ],
-      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-explicit-any": "warn", // Changing to warn for now to fix gradually
+      "@typescript-eslint/no-empty-object-type": "warn", // Changing to warn to facilitate step-by-step fixes
+      "@typescript-eslint/no-require-imports": "warn", // Changing to warn to allow gradual fixing
     },
   }
 );

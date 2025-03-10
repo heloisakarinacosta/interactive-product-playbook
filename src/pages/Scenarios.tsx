@@ -68,11 +68,18 @@ const initialSubitems = {
   ],
 };
 
+type ProductItem = {
+  id: string;
+  title: string;
+  productId?: string;
+  subitems?: Subitem[];
+};
+
 const ScenariosPage = () => {
   const { user } = useAuth();
   const [scenarios, setScenarios] = useState(initialScenarios);
   const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
-  const [scenarioItems, setScenarioItems] = useState<Record<string, any[]>>(initialItems);
+  const [scenarioItems, setScenarioItems] = useState<Record<string, ProductItem[]>>(initialItems as Record<string, ProductItem[]>);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [subitems, setSubitems] = useState<Record<string, Subitem[]>>(initialSubitems);
   const [selectedSubitem, setSelectedSubitem] = useState<Subitem | null>(null);

@@ -58,11 +58,18 @@ const initialSubitems = {
   ],
 };
 
+// Define a proper type for items
+type Item = {
+  id: string;
+  title: string;
+  subitems: Subitem[];
+};
+
 const ProductsPage = () => {
   const { user } = useAuth();
   const [products, setProducts] = useState(initialProducts);
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
-  const [items, setItems] = useState<Record<string, any[]>>(initialItems);
+  const [items, setItems] = useState<Record<string, Item[]>>(initialItems as Record<string, Item[]>);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [subitems, setSubitems] = useState<Record<string, Subitem[]>>(initialSubitems);
   const [selectedSubitem, setSelectedSubitem] = useState<Subitem | null>(null);
