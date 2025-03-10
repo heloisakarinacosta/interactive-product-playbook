@@ -1,92 +1,71 @@
 
 import mysql from 'mysql2/promise';
-import { dbConfig, dbSetupScript } from '../config/db.config';
-import fs from 'fs';
-import path from 'path';
+import { config } from '../config/db.config';
 
-// Create a connection pool
+// Create connection pool
 const pool = mysql.createPool({
-  host: dbConfig.host,
-  user: dbConfig.user,
-  password: dbConfig.password,
-  database: dbConfig.database,
+  host: config.HOST,
+  user: config.USER,
+  password: config.PASSWORD,
+  database: config.DB,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 });
 
-// Function to execute a query
-export const query = async (sql: string, params?: any[]) => {
+// Initialize database - create tables if they don't exist
+export const initDatabase = async () => {
   try {
-    const [results] = await pool.execute(sql, params);
+    // Connect to database
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        created_at DATETIME NOT NULL,
+        updated_at DATETIME NOT NULL
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS items (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_id INT NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        created_at DATETIME NOT NULL,
+        updated_at DATETIME NOT NULL,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS subitems (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        item_id INT NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        subtitle VARCHAR(255),
+        description TEXT NOT NULL,
+        last_updated_by VARCHAR(100),
+        created_at DATETIME NOT NULL,
+        updated_at DATETIME NOT NULL,
+        FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+      )
+    `);
+
+    console.log('Database tables initialized');
+  } catch (error) {
+    console.error('Error initializing database:', error);
+    throw error;
+  }
+};
+
+// Execute SQL query with parameters
+export const query = async (sql: string, params: any[] = []) => {
+  try {
+    const [results] = await pool.query(sql, params);
     return results;
   } catch (error) {
     console.error('Database query error:', error);
-    throw error;
-  }
-};
-
-// Function to save description to a text file
-export const saveDescriptionToFile = async (
-  subitemId: number,
-  title: string,
-  description: string
-): Promise<string> => {
-  try {
-    // Create directory if it doesn't exist
-    const dir = path.join(process.cwd(), 'public', 'descriptions');
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    // Create a sanitized filename
-    const sanitizedTitle = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-    
-    // Create a unique filename
-    const filename = `${subitemId}-${sanitizedTitle}.txt`;
-    const filepath = path.join(dir, filename);
-
-    // Strip HTML tags to save as plain text
-    const plainText = description.replace(/<[^>]*>/g, '');
-    
-    // Write the file
-    fs.writeFileSync(filepath, plainText);
-    
-    return filename;
-  } catch (error) {
-    console.error('Error saving description to file:', error);
-    throw error;
-  }
-};
-
-// Initialize database (create tables if they don't exist)
-export const initDatabase = async () => {
-  try {
-    // Create connection without specifying database to check if it exists
-    const tempConnection = await mysql.createConnection({
-      host: dbConfig.host,
-      user: dbConfig.user,
-      password: dbConfig.password,
-    });
-
-    // Execute the setup script
-    const scripts = dbSetupScript.split(';');
-    
-    for (const script of scripts) {
-      if (script.trim()) {
-        await tempConnection.execute(script + ';');
-      }
-    }
-    
-    await tempConnection.end();
-    
-    console.log('Database initialized successfully');
-    return true;
-  } catch (error) {
-    console.error('Database initialization error:', error);
     throw error;
   }
 };

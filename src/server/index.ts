@@ -3,7 +3,12 @@ import express from 'express';
 import { json, urlencoded } from 'express';
 import cors from 'cors';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { query, initDatabase } from '../utils/dbUtils';
+
+// Get directory name in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Initialize express app
 const app = express();
