@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Pencil, Save, Bold, Italic, Link, Image, List } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -49,26 +48,14 @@ const DetailModal: React.FC<DetailModalProps> = ({
       if (!editing || !editorRef.current) return;
       
       if (e.key === 'Enter') {
-        // Prevent default behavior
+        // Prevent default behavior to stop cursor from going to start of line
         e.preventDefault();
         
-        // Get selection to determine cursor position
-        const selection = window.getSelection();
-        const range = selection?.getRangeAt(0);
+        // Insert HTML break at cursor position
+        document.execCommand('insertHTML', false, '<br>');
         
-        if (range) {
-          // Insert line break at current position
-          const br = document.createElement('br');
-          range.deleteContents();
-          range.insertNode(br);
-          
-          // Move cursor after the break
-          range.setStartAfter(br);
-          range.setEndAfter(br);
-          selection?.removeAllRanges();
-          selection?.addRange(range);
-          
-          // Update edited description with new content
+        // Update edited description with new content
+        if (editorRef.current) {
           setEditedDescription(editorRef.current.innerHTML);
         }
         
@@ -76,6 +63,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
       }
     };
     
+    // Add event listener for keydown
     if (editing && editorRef.current) {
       editorRef.current.addEventListener('keydown', handleKeyDown);
       
