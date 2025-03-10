@@ -1,11 +1,11 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Pencil, Save, Bold, Italic, Link, Image, List } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Subitem } from './ItemCard';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useRichEditor } from '@/hooks/useRichEditor';
 
 interface DetailModalProps {
   subitem: Subitem;
@@ -25,9 +25,19 @@ const DetailModal: React.FC<DetailModalProps> = ({
   const [editedTitle, setEditedTitle] = useState(subitem.title);
   const [editedSubtitle, setEditedSubtitle] = useState(subitem.subtitle || '');
   const [editedDescription, setEditedDescription] = useState(subitem.description);
-  const editorRef = useRef<HTMLDivElement>(null);
   
-  // Reset form when subitem changes
+  const {
+    editorRef,
+    formatText,
+    insertImage,
+    insertLink,
+    handlePaste,
+    handleKeyDown
+  } = useRichEditor({
+    initialContent: subitem.description,
+    onChange: (content) => setEditedDescription(content)
+  });
+  
   useEffect(() => {
     setEditedTitle(subitem.title);
     setEditedSubtitle(subitem.subtitle || '');
@@ -35,24 +45,13 @@ const DetailModal: React.FC<DetailModalProps> = ({
     setEditing(false);
   }, [subitem]);
   
-  useEffect(() => {
-    if (editing && editorRef.current) {
-      // Set initial content of the editor when entering edit mode
-      editorRef.current.innerHTML = editedDescription;
-      editorRef.current.focus();
-    }
-  }, [editing, editedDescription]);
-  
   const handleSave = () => {
-    if (onUpdate) {
-      // Get the HTML content from the editor
-      const description = editorRef.current ? editorRef.current.innerHTML : editedDescription;
-      
+    if (onUpdate && editorRef.current) {
       onUpdate({
         ...subitem,
         title: editedTitle,
         subtitle: editedSubtitle,
-        description: description,
+        description: editorRef.current.innerHTML,
         lastUpdatedBy: user?.email || 'system',
         lastUpdatedAt: new Date().toISOString(),
       });
@@ -61,38 +60,13 @@ const DetailModal: React.FC<DetailModalProps> = ({
     setEditing(false);
   };
   
-  // Handle formatting commands
-  const formatText = (command: string, value: string = '') => {
-    document.execCommand(command, false, value);
-    if (editorRef.current) {
+  useEffect(() => {
+    if (editing && editorRef.current) {
+      editorRef.current.innerHTML = editedDescription;
       editorRef.current.focus();
     }
-  };
+  }, [editing, editedDescription]);
   
-  // Insert image
-  const insertImage = () => {
-    const url = prompt('Insira o URL da imagem:');
-    if (url) {
-      formatText('insertImage', url);
-    }
-  };
-  
-  // Insert link
-  const insertLink = () => {
-    const url = prompt('Insira o URL do link:');
-    const text = window.getSelection()?.toString() || 'Link';
-    
-    if (url) {
-      if (window.getSelection()?.toString()) {
-        formatText('createLink', url);
-      } else {
-        const linkHtml = `<a href="${url}" target="_blank">${text}</a>`;
-        document.execCommand('insertHTML', false, linkHtml);
-      }
-    }
-  };
-  
-  // Handle escape key to close modal
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -112,7 +86,6 @@ const DetailModal: React.FC<DetailModalProps> = ({
         className="bg-background rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal header */}
         <div className="flex justify-between items-center p-4 border-b">
           <div className="w-full">
             {editing ? (
@@ -173,7 +146,6 @@ const DetailModal: React.FC<DetailModalProps> = ({
           </div>
         </div>
         
-        {/* Formatting toolbar - only visible when editing */}
         {editing && (
           <div className="flex items-center gap-1 p-2 bg-muted/30 border-b">
             <Button 
@@ -229,14 +201,14 @@ const DetailModal: React.FC<DetailModalProps> = ({
           </div>
         )}
         
-        {/* Modal content */}
         <div className="flex-1 overflow-y-auto p-4">
           {editing ? (
             <div
               ref={editorRef}
               contentEditable
               className="min-h-[200px] p-3 border rounded-md focus:outline-none focus:ring-1 focus:ring-primary overflow-auto"
-              dangerouslySetInnerHTML={{ __html: editedDescription }}
+              onPaste={handlePaste as any}
+              onKeyDown={handleKeyDown as any}
             />
           ) : (
             <div 
@@ -246,7 +218,6 @@ const DetailModal: React.FC<DetailModalProps> = ({
           )}
         </div>
         
-        {/* Modal footer */}
         <div className="p-4 border-t flex justify-between text-xs text-muted-foreground">
           <div>
             Última atualização: {subitem.lastUpdatedBy || 'Sistema'} 
