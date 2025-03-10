@@ -43,19 +43,34 @@ const DetailModal: React.FC<DetailModalProps> = ({
     }
   }, [editing, editedDescription]);
 
-  // Handle the enter key in the editor
+  // Handle the enter key in the editor - FIXED
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!editing || !editorRef.current) return;
       
       if (e.key === 'Enter') {
+        // Prevent default behavior
         e.preventDefault();
         
-        // Insert a break and a new line
-        document.execCommand('insertHTML', false, '<br><br>');
+        // Get selection to determine cursor position
+        const selection = window.getSelection();
+        const range = selection?.getRangeAt(0);
         
-        // Update editedDescription after inserting new line
-        setEditedDescription(editorRef.current.innerHTML);
+        if (range) {
+          // Insert line break at current position
+          const br = document.createElement('br');
+          range.deleteContents();
+          range.insertNode(br);
+          
+          // Move cursor after the break
+          range.setStartAfter(br);
+          range.setEndAfter(br);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+          
+          // Update edited description with new content
+          setEditedDescription(editorRef.current.innerHTML);
+        }
         
         return false;
       }
