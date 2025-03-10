@@ -51,29 +51,11 @@ const DetailModal: React.FC<DetailModalProps> = ({
       if (e.key === 'Enter') {
         e.preventDefault();
         
-        // Get selection
-        const selection = window.getSelection();
-        const range = selection?.getRangeAt(0);
+        // Insert a line break using execCommand for better compatibility
+        document.execCommand('insertHTML', false, '<br><br>');
         
-        if (range) {
-          // Create and insert line break
-          const br = document.createElement('br');
-          range.deleteContents();
-          range.insertNode(br);
-          
-          // Create a text node with a zero-width space to position cursor after the break
-          const textNode = document.createTextNode('\u200B');
-          range.insertNode(textNode);
-          
-          // Position cursor after the inserted nodes
-          range.setStartAfter(textNode);
-          range.setEndAfter(textNode);
-          selection?.removeAllRanges();
-          selection?.addRange(range);
-          
-          // Update the edited description
-          setEditedDescription(editorRef.current.innerHTML);
-        }
+        // Update the edited description
+        setEditedDescription(editorRef.current.innerHTML);
         
         return false;
       }
@@ -84,6 +66,24 @@ const DetailModal: React.FC<DetailModalProps> = ({
       
       return () => {
         editorRef.current?.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [editing]);
+
+  // Handle content changes in the editor properly
+  useEffect(() => {
+    const handleInput = () => {
+      if (editorRef.current) {
+        setEditedDescription(editorRef.current.innerHTML);
+      }
+    };
+    
+    if (editing && editorRef.current) {
+      // Use input event instead of paste to capture all changes
+      editorRef.current.addEventListener('input', handleInput);
+      
+      return () => {
+        editorRef.current?.removeEventListener('input', handleInput);
       };
     }
   }, [editing]);
@@ -122,7 +122,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
             // Insert the image at the current cursor position
             document.execCommand('insertHTML', false, img.outerHTML);
             
-            // Save the current content to the editedDescription state after inserting
+            // Update editedDescription after inserting image
             setEditedDescription(editorRef.current.innerHTML);
             
             toast.success('Imagem inserida com sucesso!');
@@ -136,43 +136,22 @@ const DetailModal: React.FC<DetailModalProps> = ({
     if (editing && editorRef.current) {
       editorRef.current.addEventListener('paste', handlePaste);
       
-      // Add input event listener to capture all changes to the editor content
-      const handleInput = () => {
-        if (editorRef.current) {
-          setEditedDescription(editorRef.current.innerHTML);
-        }
-      };
-      
-      editorRef.current.addEventListener('input', handleInput);
-      
       return () => {
-        if (editorRef.current) {
-          editorRef.current.removeEventListener('paste', handlePaste);
-          editorRef.current.removeEventListener('input', handleInput);
-        }
+        editorRef.current?.removeEventListener('paste', handlePaste);
       };
     }
-    
-    return () => {
-      if (editorRef.current) {
-        editorRef.current.removeEventListener('paste', handlePaste);
-      }
-    };
   }, [editing]);
   
   const handleSave = () => {
     if (onUpdate) {
-      // Always get the latest HTML content directly from the editor
-      const description = editorRef.current ? editorRef.current.innerHTML : editedDescription;
-      
-      // Log the description to see what's being saved
-      console.log("Saving description:", description);
+      // Ensure we get the most up-to-date content from the editor
+      const finalDescription = editorRef.current ? editorRef.current.innerHTML : editedDescription;
       
       onUpdate({
         ...subitem,
         title: editedTitle,
         subtitle: editedSubtitle,
-        description: description,
+        description: finalDescription,
         lastUpdatedBy: user?.email || 'system',
         lastUpdatedAt: new Date().toISOString(),
       });
@@ -367,12 +346,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
               contentEditable
               className="min-h-[200px] p-3 border rounded-md focus:outline-none focus:ring-1 focus:ring-primary overflow-auto"
               dangerouslySetInnerHTML={{ __html: editedDescription }}
-              onBlur={() => {
-                // Update state when editor loses focus
-                if (editorRef.current) {
-                  setEditedDescription(editorRef.current.innerHTML);
-                }
-              }}
+              suppressContentEditableWarning={true}
             />
           ) : (
             <div 
