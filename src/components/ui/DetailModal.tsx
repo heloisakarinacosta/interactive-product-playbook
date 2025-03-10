@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Pencil, Save, Bold, Italic, Link, Image, List } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -42,6 +43,33 @@ const DetailModal: React.FC<DetailModalProps> = ({
     }
   }, [editing, editedDescription]);
 
+  // Handle the enter key in the editor
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!editing || !editorRef.current) return;
+      
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        
+        // Insert a break and a new line
+        document.execCommand('insertHTML', false, '<br><br>');
+        
+        // Update editedDescription after inserting new line
+        setEditedDescription(editorRef.current.innerHTML);
+        
+        return false;
+      }
+    };
+    
+    if (editing && editorRef.current) {
+      editorRef.current.addEventListener('keydown', handleKeyDown);
+      
+      return () => {
+        editorRef.current?.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [editing]);
+
   // Add paste event listener for handling image paste
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
@@ -77,7 +105,6 @@ const DetailModal: React.FC<DetailModalProps> = ({
             document.execCommand('insertHTML', false, img.outerHTML);
             
             // Save the current content to the editedDescription state after inserting
-            // This ensures the image is included in the state that will be saved
             setEditedDescription(editorRef.current.innerHTML);
             
             toast.success('Imagem inserida com sucesso!');
@@ -117,8 +144,11 @@ const DetailModal: React.FC<DetailModalProps> = ({
   
   const handleSave = () => {
     if (onUpdate) {
-      // Get the HTML content from the editor
+      // Always get the latest HTML content directly from the editor
       const description = editorRef.current ? editorRef.current.innerHTML : editedDescription;
+      
+      // Log the description to see what's being saved
+      console.log("Saving description:", description);
       
       onUpdate({
         ...subitem,
