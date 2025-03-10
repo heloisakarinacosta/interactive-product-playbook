@@ -34,11 +34,80 @@ app.get('/api/products', async (req, res) => {
     const products = await query('SELECT * FROM products ORDER BY updated_at DESC');
     res.json(products);
   } catch (error) {
+    console.error('Error fetching products:', error);
     res.status(500).json({ error: 'Failed to fetch products' });
   }
 });
 
-// Add more routes for items, subitems, scenarios, etc.
+// Items routes
+app.get('/api/items/:productId', async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const items = await query(
+      'SELECT * FROM items WHERE product_id = ? ORDER BY created_at DESC',
+      [productId]
+    );
+    res.json(items);
+  } catch (error) {
+    console.error('Error fetching items:', error);
+    res.status(500).json({ error: 'Failed to fetch items' });
+  }
+});
+
+// Subitems routes
+app.get('/api/subitems/:itemId', async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const subitems = await query(
+      'SELECT * FROM subitems WHERE item_id = ? ORDER BY created_at DESC',
+      [itemId]
+    );
+    res.json(subitems);
+  } catch (error) {
+    console.error('Error fetching subitems:', error);
+    res.status(500).json({ error: 'Failed to fetch subitems' });
+  }
+});
+
+// Create new product
+app.post('/api/products', async (req, res) => {
+  try {
+    const { title, description } = req.body;
+    const result = await query(
+      'INSERT INTO products (title, description, created_at, updated_at) VALUES (?, ?, NOW(), NOW())',
+      [title, description]
+    );
+    
+    const newProductId = result.insertId;
+    const newProduct = await query('SELECT * FROM products WHERE id = ?', [newProductId]);
+    
+    res.status(201).json(newProduct[0]);
+  } catch (error) {
+    console.error('Error creating product:', error);
+    res.status(500).json({ error: 'Failed to create product' });
+  }
+});
+
+// Update product
+app.put('/api/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description } = req.body;
+    
+    await query(
+      'UPDATE products SET title = ?, description = ?, updated_at = NOW() WHERE id = ?',
+      [title, description, id]
+    );
+    
+    const updated = await query('SELECT * FROM products WHERE id = ?', [id]);
+    res.json(updated[0]);
+  } catch (error) {
+    console.error('Error updating product:', error);
+    res.status(500).json({ error: 'Failed to update product' });
+  }
+});
+
+// Add more routes as needed for items and subitems
 
 // Start the server
 app.listen(PORT, () => {
