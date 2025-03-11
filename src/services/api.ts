@@ -1,7 +1,10 @@
 
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001/api';
+// Determine API URL based on environment
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+console.log('Using API URL:', API_URL); // Debug log
 
 // Create axios instance
 const api = axios.create({
@@ -10,6 +13,30 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Add request interceptor for debugging
+api.interceptors.request.use(
+  (config) => {
+    console.log(`🚀 Making ${config.method?.toUpperCase()} request to ${config.url}`);
+    return config;
+  },
+  (error) => {
+    console.error('Request error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for debugging
+api.interceptors.response.use(
+  (response) => {
+    console.log(`✅ Received response from ${response.config.url}:`, response.status);
+    return response;
+  },
+  (error) => {
+    console.error('Response error:', error.message);
+    return Promise.reject(error);
+  }
+);
 
 // Products API
 export const fetchProducts = async () => {
