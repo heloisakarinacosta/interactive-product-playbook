@@ -10,7 +10,9 @@ const pool = mysql.createPool({
   database: dbConfig.database,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  // Adicionando as configurações para resolver o problema de autenticação
+  authPlugins: dbConfig.authPlugins
 });
 
 // Initialize database - create tables if they don't exist

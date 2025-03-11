@@ -5,7 +5,13 @@ export const dbConfig = {
   user: 'root',
   password: '',  // Set your database password here
   database: 'playbook_produtos',
-  port: 3306
+  port: 3306,
+  // Adicionando configurações para resolver o problema de autenticação
+  authPlugins: {
+    mysql_native_password: () => ({ 
+      default: true 
+    })
+  }
 };
 
 // SQL script to create the database and tables
