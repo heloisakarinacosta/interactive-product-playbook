@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 
 // Determine API URL based on environment
@@ -78,19 +77,78 @@ export const fetchItems = async (productId: string) => {
 };
 
 export const createItem = async (productId: string, itemData: { title: string }) => {
+  console.log('Creating item for product:', productId, itemData);
   const response = await api.post(`/items`, { ...itemData, product_id: productId });
   return response.data;
 };
 
 export const updateItem = async (id: string, itemData: { title: string }) => {
   console.log(`Updating item ${id} with data:`, itemData);
-  try {
-    const response = await api.put(`/items/${id}`, itemData);
-    return response.data;
-  } catch (error) {
-    console.error(`Failed to update item ${id}:`, error);
-    throw error;
-  }
+  const response = await api.put(`/items/${id}`, itemData);
+  return response.data;
+};
+
+// Scenario Items API
+export const fetchScenarioItems = async (scenarioId: string) => {
+  const response = await api.get(`/scenario-items/${scenarioId}`);
+  return response.data;
+};
+
+export const linkItemToScenario = async (scenarioId: string, itemId: string) => {
+  const response = await api.post(`/scenario-items`, {
+    scenario_id: scenarioId,
+    item_id: itemId,
+    created_by: 'admin', // This should come from the auth context
+    created_at: new Date().toISOString(),
+  });
+  return response.data;
+};
+
+export const unlinkItemFromScenario = async (scenarioId: string, itemId: string) => {
+  const response = await api.delete(`/scenario-items/${scenarioId}/${itemId}`);
+  return response.data;
+};
+
+// Scenarios API
+export const fetchScenarios = async () => {
+  const response = await api.get('/scenarios');
+  return response.data;
+};
+
+export const createScenario = async (scenarioData: { 
+  title: string; 
+  description: string;
+  formattedDescription?: string;
+}) => {
+  const response = await api.post('/scenarios', scenarioData);
+  return response.data;
+};
+
+export const updateScenario = async (id: string, scenarioData: {
+  title: string;
+  description: string;
+  formattedDescription?: string;
+}) => {
+  const response = await api.put(`/scenarios/${id}`, scenarioData);
+  return response.data;
+};
+
+// Subitem visibility for scenarios
+export const updateSubitemVisibility = async (
+  scenarioId: string,
+  itemId: string,
+  subitemId: string,
+  isVisible: boolean
+) => {
+  const response = await api.put(`/scenario-subitems/${scenarioId}/${itemId}/${subitemId}/visibility`, {
+    is_visible: isVisible,
+  });
+  return response.data;
+};
+
+export const getSubitemVisibility = async (scenarioId: string, itemId: string) => {
+  const response = await api.get(`/scenario-subitems/${scenarioId}/${itemId}/visibility`);
+  return response.data;
 };
 
 // Subitems API
