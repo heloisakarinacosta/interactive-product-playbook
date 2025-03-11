@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Plus, Check, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -51,6 +52,7 @@ const ScenariosPage = () => {
   const [selectedProductItems, setSelectedProductItems] = useState<string[]>([]);
   const [visibilityDialogOpen, setVisibilityDialogOpen] = useState(false);
   const [subitemVisibility, setSubitemVisibility] = useState<Record<string, boolean>>({});
+  const [itemSubitems, setItemSubitems] = useState<Record<string, Subitem[]>>({});
 
   // Fetch scenarios
   const { data: scenarios = [], isLoading: isLoadingScenarios } = useQuery({
@@ -70,6 +72,36 @@ const ScenariosPage = () => {
     queryKey: ['products'],
     queryFn: fetchProducts,
   });
+
+  // Fetch item details when an item is selected
+  useEffect(() => {
+    if (selectedItem) {
+      // Simulate fetching subitems for the selected item
+      // In a real app, this would come from the API
+      // For now, we'll just set some dummy data
+      const dummySubitems: Subitem[] = [
+        {
+          id: `subitem-${selectedItem}-1`,
+          title: 'Subitem 1',
+          description: 'Description of subitem 1',
+          lastUpdatedBy: 'system',
+          lastUpdatedAt: new Date().toISOString(),
+        },
+        {
+          id: `subitem-${selectedItem}-2`,
+          title: 'Subitem 2',
+          description: 'Description of subitem 2',
+          lastUpdatedBy: 'system',
+          lastUpdatedAt: new Date().toISOString(),
+        }
+      ];
+      
+      setItemSubitems(prev => ({
+        ...prev,
+        [selectedItem]: dummySubitems
+      }));
+    }
+  }, [selectedItem]);
 
   // Mutations
   const createScenarioMutation = useMutation({
@@ -172,15 +204,6 @@ const ScenariosPage = () => {
   };
   
   const handleManageSubitems = (itemId: string) => {
-    // if (!subitems[itemId]) return;
-    
-    // Initialize visibility state
-    // const initialVisibility: Record<string, boolean> = {};
-    // subitems[itemId].forEach(subitem => {
-    //   initialVisibility[subitem.id] = !subitem.hidden;
-    // });
-    
-    // setSubitemVisibility(initialVisibility);
     setSelectedItem(itemId);
     setVisibilityDialogOpen(true);
   };
@@ -188,15 +211,15 @@ const ScenariosPage = () => {
   const handleSaveSubitemVisibility = () => {
     if (!selectedItem || !selectedScenario) return;
     
-    // const updatedSubitems = subitems[selectedItem].map(subitem => ({
-    //   ...subitem,
-    //   hidden: !subitemVisibility[subitem.id],
-    // }));
-    
-    // setSubitems({
-    //   ...subitems,
-    //   [selectedItem]: updatedSubitems,
-    // });
+    // For each subitem, update its visibility in the backend
+    Object.entries(subitemVisibility).forEach(([subitemId, isVisible]) => {
+      updateVisibilityMutation.mutate({
+        scenarioId: selectedScenario,
+        itemId: selectedItem,
+        subitemId,
+        isVisible
+      });
+    });
     
     setVisibilityDialogOpen(false);
     toast.success('Visibilidade dos subitens atualizada');
@@ -295,7 +318,7 @@ const ScenariosPage = () => {
                     key={item.item_id}
                     id={item.item_id}
                     title={item.item_id}
-                    // subitems={subitems[item.item_id] || []}
+                    subitems={itemSubitems[item.item_id] || []}
                     selected={selectedItem === item.item_id}
                     onClick={() => handleItemSelect(item.item_id)}
                     onAddSubitem={() => handleManageSubitems(item.item_id)}
@@ -348,9 +371,6 @@ const ScenariosPage = () => {
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
                       >
                         {item.title}
-                        {/* <span className="ml-2 text-xs text-muted-foreground">
-                          (Produto {item.productId.replace('p', '')})
-                        </span> */}
                       </label>
                     </div>
                   ))}
@@ -382,13 +402,13 @@ const ScenariosPage = () => {
           </DialogHeader>
           
           <div className="py-4 max-h-[50vh] overflow-y-auto">
-            {/* {selectedItem && subitems[selectedItem] && subitems[selectedItem].length > 0 ? (
+            {selectedItem && itemSubitems[selectedItem] && itemSubitems[selectedItem].length > 0 ? (
               <div className="space-y-4">
-                {subitems[selectedItem].map((subitem) => (
+                {itemSubitems[selectedItem].map((subitem) => (
                   <div key={subitem.id} className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50">
                     <Checkbox 
                       id={`visibility-${subitem.id}`} 
-                      checked={subitemVisibility[subitem.id] || false}
+                      checked={subitemVisibility[subitem.id] ?? !subitem.hidden}
                       onCheckedChange={(checked) => 
                         setSubitemVisibility({
                           ...subitemVisibility,
@@ -409,7 +429,7 @@ const ScenariosPage = () => {
               <div className="text-center py-4 text-muted-foreground">
                 Nenhum subitem disponível para este item.
               </div>
-            )} */}
+            )}
           </div>
           
           <DialogFooter className="flex sm:justify-between">
