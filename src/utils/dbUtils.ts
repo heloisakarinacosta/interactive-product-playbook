@@ -2,20 +2,28 @@
 import mysql from 'mysql2/promise';
 import { dbConfig } from '../config/db.config';
 
-// Create connection pool
+// Create connection pool com configurações mais seguras para MariaDB 11.4
 const pool = mysql.createPool({
   host: dbConfig.host,
   user: dbConfig.user,
   password: dbConfig.password,
   database: dbConfig.database,
+  port: dbConfig.port,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  authPlugins: dbConfig.authPlugins
 });
 
 // Initialize database - create tables if they don't exist
 export const initDatabase = async () => {
   try {
+    console.log('Tentando inicializar o banco de dados...');
+    // Teste de conexão antes de prosseguir
+    const connection = await pool.getConnection();
+    console.log('Conexão bem-sucedida!');
+    connection.release();
+
     // Connect to database
     await pool.query(`
       CREATE TABLE IF NOT EXISTS products (
@@ -67,5 +75,30 @@ export const query = async (sql: string, params: any[] = []) => {
   } catch (error) {
     console.error('Database query error:', error);
     throw error;
+  }
+};
+
+// Método separado para testar apenas a conexão
+export const testConnection = async () => {
+  try {
+    console.log('Testando conexão com o banco de dados...');
+    console.log('Configuração:', {
+      host: dbConfig.host,
+      user: dbConfig.user,
+      database: dbConfig.database,
+      port: dbConfig.port
+    });
+    const connection = await pool.getConnection();
+    console.log('✅ Conexão bem-sucedida!');
+    
+    // Obter informações do servidor
+    const [rows] = await connection.query('SELECT VERSION() as version');
+    console.log('Versão do banco de dados:', rows);
+    
+    connection.release();
+    return true;
+  } catch (error) {
+    console.error('❌ Erro ao conectar com o banco de dados:', error);
+    return false;
   }
 };
