@@ -6,11 +6,11 @@ export const dbConfig = {
   password: '',  // Set your database password here
   database: 'playbook_produtos',
   port: 3306,
-  // Adicionando configurações para resolver o problema de autenticação
+  // Modificando a configuração de autenticação para o formato correto
   authPlugins: {
-    mysql_native_password: () => ({ 
-      default: true 
-    })
+    mysql_native_password: () => {
+      return { default: true };
+    }
   }
 };
 
