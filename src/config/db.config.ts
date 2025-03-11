@@ -1,17 +1,10 @@
-
 // Database connection configuration for MariaDB
 export const dbConfig = {
   host: 'localhost',
   user: 'root',
   password: '',  // Set your database password here
   database: 'playbook_produtos',
-  port: 3306,
-  // Configuração explícita para o MariaDB 11.4.4
-  authPlugins: {
-    mysql_native_password: () => {
-      return Buffer.from('mysql_native_password');
-    }
-  }
+  port: 3306
 };
 
 // SQL script to create the database and tables
