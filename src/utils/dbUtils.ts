@@ -10,13 +10,7 @@ const pool = mysql.createPool({
   database: dbConfig.database,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0,
-  // Configuração correta de plugins de autenticação
-  authPlugins: {
-    mysql_native_password: () => {
-      return Promise.resolve();
-    }
-  }
+  queueLimit: 0
 });
 
 // Initialize database - create tables if they don't exist
