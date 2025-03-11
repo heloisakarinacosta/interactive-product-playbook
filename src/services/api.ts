@@ -18,6 +18,10 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     console.log(`🚀 Making ${config.method?.toUpperCase()} request to ${config.url}`);
+    // Log request body for debugging if it exists
+    if (config.data) {
+      console.log('Request payload:', config.data);
+    }
     return config;
   },
   (error) => {
@@ -33,7 +37,20 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error('Response error:', error.message);
+    // Enhanced error logging
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error('Response error data:', error.response.data);
+      console.error('Response error status:', error.response.status);
+      console.error('Response error headers:', error.response.headers);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('No response received:', error.request);
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Request setup error:', error.message);
+    }
     return Promise.reject(error);
   }
 );
@@ -66,8 +83,14 @@ export const createItem = async (productId: string, itemData: { title: string })
 };
 
 export const updateItem = async (id: string, itemData: { title: string }) => {
-  const response = await api.put(`/items/${id}`, itemData);
-  return response.data;
+  console.log(`Updating item ${id} with data:`, itemData);
+  try {
+    const response = await api.put(`/items/${id}`, itemData);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to update item ${id}:`, error);
+    throw error;
+  }
 };
 
 // Subitems API

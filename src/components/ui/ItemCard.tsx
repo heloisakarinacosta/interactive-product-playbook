@@ -42,19 +42,45 @@ const ItemCard: React.FC<ItemCardProps> = ({
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(title);
+  const [isSaving, setIsSaving] = useState(false);
   
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setEditedTitle(title); // Reset to current title when starting edit
     setEditing(true);
   };
   
-  const handleSave = (e: React.MouseEvent) => {
+  const handleSave = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onUpdate) {
-      onUpdate(id, editedTitle);
-      toast.success('Item atualizado com sucesso!');
+    
+    if (!editedTitle.trim()) {
+      toast.error('O título não pode ser vazio');
+      return;
     }
-    setEditing(false);
+    
+    if (onUpdate) {
+      try {
+        setIsSaving(true);
+        console.log(`Saving item ${id} with title: ${editedTitle}`);
+        await onUpdate(id, editedTitle);
+        toast.success('Item atualizado com sucesso!');
+        setEditing(false);
+      } catch (error) {
+        console.error('Error saving item:', error);
+        toast.error('Erro ao atualizar item. Tente novamente.');
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  };
+  
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSave(e as unknown as React.MouseEvent);
+    } else if (e.key === 'Escape') {
+      setEditing(false);
+      setEditedTitle(title); // Reset to original
+    }
   };
   
   const handleAddSubitem = (e: React.MouseEvent) => {
@@ -98,8 +124,10 @@ const ItemCard: React.FC<ItemCardProps> = ({
               type="text"
               value={editedTitle}
               onChange={(e) => setEditedTitle(e.target.value)}
+              onKeyDown={handleInputKeyDown}
               className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="Título"
+              autoFocus
             />
           </div>
         ) : (
@@ -136,8 +164,14 @@ const ItemCard: React.FC<ItemCardProps> = ({
         {user?.isAdmin && (
           <>
             {editing ? (
-              <Button variant="default" size="sm" onClick={handleSave}>
-                <Check size={14} className="mr-1" /> Salvar
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={handleSave}
+                disabled={isSaving}
+              >
+                <Check size={14} className="mr-1" /> 
+                {isSaving ? 'Salvando...' : 'Salvar'}
               </Button>
             ) : (
               <Button variant="ghost" size="sm" onClick={handleEdit}>
