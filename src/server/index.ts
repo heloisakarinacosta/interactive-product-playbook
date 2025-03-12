@@ -1,8 +1,13 @@
+
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
 import { cspMiddleware } from '../middleware/csp';
+import { query, initDatabase } from '../utils/dbUtils';
+import { ResultSetHeader } from 'mysql2';
 
 const app = express();
+const PORT = process.env.PORT || 3001;
 
 // Apply CSP middleware before other middleware
 app.use(cspMiddleware);
@@ -45,7 +50,6 @@ app.post('/api/products', async (req, res) => {
       [title, description]
     );
     
-    // Corrigido: verificamos explicitamente o tipo como ResultSetHeader para acessar insertId
     const resultHeader = result as ResultSetHeader;
     const newProductId = resultHeader.insertId;
     
@@ -100,7 +104,6 @@ app.post('/api/items', async (req, res) => {
       [product_id, title]
     );
     
-    // Corrigido: verificamos explicitamente o tipo como ResultSetHeader para acessar insertId
     const resultHeader = result as ResultSetHeader;
     const newItemId = resultHeader.insertId;
     
@@ -136,7 +139,6 @@ app.post('/api/subitems', async (req, res) => {
       [item_id, title, subtitle, description, last_updated_by]
     );
     
-    // Corrigido: verificamos explicitamente o tipo como ResultSetHeader para acessar insertId
     const resultHeader = result as ResultSetHeader;
     const newSubitemId = resultHeader.insertId;
     
@@ -171,4 +173,3 @@ app.put('/api/subitems/:id', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
