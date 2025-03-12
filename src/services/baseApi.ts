@@ -3,7 +3,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 
 // Determine API URL based on environment
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 console.log('Using API URL:', API_URL); // Debug log
 
