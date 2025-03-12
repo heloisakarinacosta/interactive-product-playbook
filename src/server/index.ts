@@ -2,9 +2,14 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { cspMiddleware } from '../middleware/csp';
 import { query, initDatabase } from '../utils/dbUtils';
 import { ResultSetHeader } from 'mysql2';
+
+// Fix for __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
