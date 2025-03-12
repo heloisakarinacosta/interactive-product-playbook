@@ -4,7 +4,6 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
@@ -12,11 +11,9 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react({
-      // Configurando o SWC para evitar uso de eval
-      jsxImportSource: "@emotion/react",
-      plugins: [
-        ["@swc/plugin-emotion", {}]
-      ]
+      // Using SWC's built-in optimization
+      minify: true,
+      tsDecorators: true,
     }),
     mode === 'development' &&
     componentTagger(),
@@ -26,11 +23,22 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Adicionar configuração específica para evitar eval
+  // Configure esbuild to avoid eval
   esbuild: {
-    // Desativar minificação que pode introduzir eval
     minifyIdentifiers: false,
     minifySyntax: true,
     minifyWhitespace: true,
+    target: 'es2015',
+  },
+  // Additional security optimizations
+  build: {
+    sourcemap: false,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        passes: 2,
+      }
+    }
   }
 }));
