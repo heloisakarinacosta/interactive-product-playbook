@@ -1,10 +1,10 @@
 
 import axios from 'axios';
 import { Subitem, SubitemCreateInput } from '@/types/api.types';
-import { API_URL } from './baseApi';
+import api from './baseApi';
 
 // Endpoints
-const ITEMS_ENDPOINT = `${API_URL}/items`;
+const ITEMS_ENDPOINT = `${api.defaults.baseURL}/items`;
 
 // Service functions
 export const fetchSubitems = async (itemId: string): Promise<Subitem[]> => {

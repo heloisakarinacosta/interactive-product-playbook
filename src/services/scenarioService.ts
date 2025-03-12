@@ -1,10 +1,10 @@
 
 import axios from 'axios';
 import { Scenario, ScenarioCreateInput } from '@/types/api.types';
-import { API_URL } from './baseApi';
+import api from './baseApi';
 
 // Endpoints
-const SCENARIOS_ENDPOINT = `${API_URL}/scenarios`;
+const SCENARIOS_ENDPOINT = `${api.defaults.baseURL}/scenarios`;
 
 // Service functions
 export const fetchScenarios = async (): Promise<Scenario[]> => {
