@@ -82,6 +82,7 @@ const ScenariosPage = () => {
         
         for (const item of scenarioItems) {
           try {
+            console.log(`Fetching subitems for item ${item.item_id}`);
             const subitems = await fetchSubitems(item.item_id);
             newItemSubitems[item.item_id] = subitems;
           } catch (error) {
@@ -165,10 +166,13 @@ const ScenariosPage = () => {
 
   // Handlers
   const handleAddScenario = () => {
+    if (createScenarioMutation.isPending) return;
+    
     setIsLoading(true);
     createScenarioMutation.mutate({
       title: 'Novo Cenário',
       description: 'Descrição do novo cenário',
+      formattedDescription: '<p>Descrição do novo cenário</p>'
     }, {
       onSettled: () => setIsLoading(false)
     });
@@ -177,7 +181,11 @@ const ScenariosPage = () => {
   const handleUpdateScenario = (id: string, title: string, description: string) => {
     updateScenarioMutation.mutate({
       id,
-      data: { title, description },
+      data: { 
+        title, 
+        description,
+        formattedDescription: description 
+      },
     });
   };
 
@@ -302,7 +310,7 @@ const ScenariosPage = () => {
                 disabled={isLoading || createScenarioMutation.isPending}
               >
                 <Plus size={16} className="mr-1" />
-                {isLoading ? 'Adicionando...' : 'Adicionar'}
+                {isLoading || createScenarioMutation.isPending ? 'Adicionando...' : 'Adicionar'}
               </Button>
             )}
           </div>
@@ -318,10 +326,10 @@ const ScenariosPage = () => {
                   key={scenario.id}
                   id={scenario.id}
                   title={scenario.title}
-                  description={scenario.description}
+                  description={scenario.formatted_description || scenario.description}
                   selected={selectedScenario === scenario.id}
                   onClick={() => handleScenarioSelect(scenario.id)}
-                  onUpdate={handleUpdateScenario}
+                  onUpdate={(id, title, description) => handleUpdateScenario(id, title, description)}
                   isScenario={true}
                 />
               ))}
@@ -336,10 +344,10 @@ const ScenariosPage = () => {
                   variant="outline"
                   className="mt-4"
                   onClick={handleAddScenario}
-                  disabled={isLoading}
+                  disabled={isLoading || createScenarioMutation.isPending}
                 >
                   <Plus size={16} className="mr-1" />
-                  Adicionar Cenário
+                  {isLoading || createScenarioMutation.isPending ? 'Adicionando...' : 'Adicionar Cenário'}
                 </Button>
               )}
             </div>
