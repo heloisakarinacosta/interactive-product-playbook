@@ -13,9 +13,6 @@ export default defineConfig(({ mode }) => ({
     react({
       // Using SWC's built-in optimization settings
       tsDecorators: true,
-      swcOptions: {
-        minify: true,
-      }
     }),
     mode === 'development' &&
     componentTagger(),
