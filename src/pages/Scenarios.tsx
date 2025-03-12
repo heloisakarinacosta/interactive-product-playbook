@@ -1,46 +1,21 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Plus, Check, X } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Carousel from '@/components/ui/carousel';
-import ProductCard from '@/components/ui/ProductCard';
-import ItemCard, { Subitem } from '@/components/ui/ItemCard';
 import DetailModal from '@/components/ui/DetailModal';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import {
-  fetchScenarios,
-  createScenario,
-  updateScenario,
-  fetchScenarioItems,
-  linkItemToScenario,
-  unlinkItemFromScenario,
-  updateSubitemVisibility,
-  getSubitemVisibility,
-  fetchProducts,
-  fetchItems,
-  fetchSubitems,
-} from '@/services/api';
-
-type ProductItem = {
-  id: string;
-  title: string;
-  productId?: string;
-  product_id?: string;
-};
+import ScenarioList from '@/components/scenarios/ScenarioList';
+import ScenarioItemList from '@/components/scenarios/ScenarioItemList';
+import { ItemSelectionDialog } from '@/components/scenarios/ItemSelectionDialog';
+import { SubitemVisibilityDialog } from '@/components/scenarios/SubitemVisibilityDialog';
+import { fetchScenarios, createScenario, updateScenario, fetchScenarioItems, linkItemToScenario, getSubitemVisibility, updateSubitemVisibility, fetchProducts, fetchItems, fetchSubitems } from '@/services/api';
+import { Subitem, ScenarioItem, Item } from '@/types/api.types';
 
 const ScenariosPage = () => {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [selectedSubitem, setSelectedSubitem] = useState<Subitem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemSelectionOpen, setItemSelectionOpen] = useState(false);
-  const [selectedProductItems, setSelectedProductItems] = useState<string[]>([]);
   const [visibilityDialogOpen, setVisibilityDialogOpen] = useState(false);
   const [subitemVisibility, setSubitemVisibility] = useState<Record<string, boolean>>({});
   const [itemSubitems, setItemSubitems] = useState<Record<string, Subitem[]>>({});
@@ -297,245 +272,52 @@ const ScenariosPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 pt-16">
-      {/* Scenarios section */}
-      <section className="p-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-medium">Cenários</h2>
-            {user?.isAdmin && (
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={handleAddScenario}
-                disabled={isLoading || createScenarioMutation.isPending}
-              >
-                <Plus size={16} className="mr-1" />
-                {isLoading || createScenarioMutation.isPending ? 'Adicionando...' : 'Adicionar'}
-              </Button>
-            )}
-          </div>
-
-          {isLoadingScenarios ? (
-            <div className="p-8 text-center">
-              <p className="text-muted-foreground">Carregando cenários...</p>
-            </div>
-          ) : scenarios.length > 0 ? (
-            <Carousel itemsPerView={4} spacing={16}>
-              {scenarios.map((scenario) => (
-                <ProductCard
-                  key={scenario.id}
-                  id={scenario.id}
-                  title={scenario.title}
-                  description={scenario.formatted_description || scenario.description}
-                  selected={selectedScenario === scenario.id}
-                  onClick={() => handleScenarioSelect(scenario.id)}
-                  onUpdate={(id, title, description) => handleUpdateScenario(id, title, description)}
-                  isScenario={true}
-                />
-              ))}
-            </Carousel>
-          ) : (
-            <div className="bg-muted/30 rounded-lg p-8 text-center">
-              <p className="text-muted-foreground">
-                Nenhum cenário cadastrado.
-              </p>
-              {user?.isAdmin && (
-                <Button 
-                  variant="outline"
-                  className="mt-4"
-                  onClick={handleAddScenario}
-                  disabled={isLoading || createScenarioMutation.isPending}
-                >
-                  <Plus size={16} className="mr-1" />
-                  {isLoading || createScenarioMutation.isPending ? 'Adicionando...' : 'Adicionar Cenário'}
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Scenario Items section */}
+      <ScenarioList
+        scenarios={scenarios}
+        selectedScenario={selectedScenario}
+        isLoading={isLoadingScenarios}
+        isCreating={isLoading || createScenarioMutation.isPending}
+        onScenarioSelect={handleScenarioSelect}
+        onAddScenario={handleAddScenario}
+        onUpdateScenario={handleUpdateScenario}
+      />
+      
       {selectedScenario && (
-        <section className="p-4 mt-4">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-medium">
-                Itens do Cenário: {scenarios.find(s => s.id === selectedScenario)?.title}
-              </h2>
-              
-              {user?.isAdmin && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleOpenAddItems}
-                  className="flex items-center gap-1"
-                  disabled={isLoading}
-                >
-                  <Plus size={16} />
-                  Gerenciar Itens
-                </Button>
-              )}
-            </div>
-            
-            {isLoadingItems ? (
-              <div className="p-8 text-center">
-                <p className="text-muted-foreground">Carregando itens do cenário...</p>
-              </div>
-            ) : scenarioItems && scenarioItems.length > 0 ? (
-              <Carousel itemsPerView={3} spacing={16}>
-                {scenarioItems.map((item) => (
-                  <ItemCard
-                    key={item.item_id}
-                    id={item.item_id}
-                    title={item.title || item.item_id}
-                    subitems={itemSubitems[item.item_id] || []}
-                    selected={selectedItem === item.item_id}
-                    onClick={() => handleItemSelect(item.item_id)}
-                    onAddSubitem={() => handleManageSubitems(item.item_id)}
-                    onSelectSubitem={handleSelectSubitem}
-                  />
-                ))}
-              </Carousel>
-            ) : (
-              <div className="bg-muted/30 rounded-lg p-8 text-center">
-                <p className="text-muted-foreground">
-                  Nenhum item adicionado a este cenário.
-                </p>
-                {user?.isAdmin && (
-                  <Button 
-                    variant="outline" 
-                    className="mt-4"
-                    onClick={handleOpenAddItems}
-                    disabled={isLoading}
-                  >
-                    <Plus size={16} className="mr-1" />
-                    Adicionar Itens
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
+        <ScenarioItemList
+          scenarioTitle={scenarios.find(s => s.id === selectedScenario)?.title || ''}
+          items={scenarioItems}
+          selectedItem={selectedItem}
+          itemSubitems={itemSubitems}
+          isLoading={isLoadingItems}
+          onItemSelect={handleItemSelect}
+          onManageItems={handleOpenAddItems}
+          onManageSubitems={handleManageSubitems}
+          onSelectSubitem={handleSelectSubitem}
+        />
       )}
-
-      {/* Item Selection Dialog */}
-      <Dialog open={itemSelectionOpen} onOpenChange={setItemSelectionOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Selecionar Itens para o Cenário</DialogTitle>
-          </DialogHeader>
-          
-          <div className="py-4 max-h-[50vh] overflow-y-auto">
-            <div className="space-y-4">
-              {allProducts.map((product) => (
-                <div key={product.id}>
-                  <h3 className="text-md font-semibold mb-2">{product.title}</h3>
-                  {product.items && product.items.length > 0 ? (
-                    product.items.map((item: ProductItem) => (
-                      <div key={item.id} className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50">
-                        <Checkbox 
-                          id={item.id} 
-                          checked={selectedProductItems.includes(item.id)}
-                          onCheckedChange={() => toggleItemSelection(item.id)}
-                        />
-                        <label 
-                          htmlFor={item.id} 
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                        >
-                          {item.title}
-                        </label>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-sm text-muted-foreground italic p-2">
-                      Nenhum item disponível neste produto
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <DialogFooter className="flex sm:justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setItemSelectionOpen(false)}
-              disabled={isLoading}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              type="button" 
-              onClick={handleSaveSelectedItems}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Salvando...' : 'Salvar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Subitem Visibility Dialog */}
-      <Dialog open={visibilityDialogOpen} onOpenChange={setVisibilityDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Gerenciar Subitens</DialogTitle>
-          </DialogHeader>
-          
-          <div className="py-4 max-h-[50vh] overflow-y-auto">
-            {selectedItem && itemSubitems[selectedItem] && itemSubitems[selectedItem].length > 0 ? (
-              <div className="space-y-4">
-                {itemSubitems[selectedItem].map((subitem) => (
-                  <div key={subitem.id} className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50">
-                    <Checkbox 
-                      id={`visibility-${subitem.id}`} 
-                      checked={subitemVisibility[subitem.id] ?? !subitem.hidden}
-                      onCheckedChange={(checked) => 
-                        setSubitemVisibility({
-                          ...subitemVisibility,
-                          [subitem.id]: !!checked,
-                        })
-                      }
-                    />
-                    <label 
-                      htmlFor={`visibility-${subitem.id}`} 
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                    >
-                      {subitem.title}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-4 text-muted-foreground">
-                Nenhum subitem disponível para este item.
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter className="flex sm:justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setVisibilityDialogOpen(false)}
-              disabled={isLoading}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              type="button" 
-              onClick={handleSaveSubitemVisibility}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Salvando...' : 'Salvar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Detail Modal */}
+      
+      <ItemSelectionDialog
+        open={itemSelectionOpen}
+        onOpenChange={setItemSelectionOpen}
+        onSave={handleSaveSelectedItems}
+        isLoading={isLoading}
+        selectedItems={selectedProductItems}
+        onItemToggle={toggleItemSelection}
+      />
+      
+      <SubitemVisibilityDialog
+        open={visibilityDialogOpen}
+        onOpenChange={setVisibilityDialogOpen}
+        onSave={handleSaveSubitemVisibility}
+        isLoading={isLoading}
+        selectedItem={selectedItem}
+        itemSubitems={itemSubitems}
+        visibility={subitemVisibility}
+        onVisibilityChange={(subitemId, isVisible) => 
+          setSubitemVisibility(prev => ({ ...prev, [subitemId]: isVisible }))
+        }
+      />
+      
       {selectedSubitem && (
         <DetailModal
           subitem={selectedSubitem}

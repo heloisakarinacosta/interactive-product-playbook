@@ -1,4 +1,3 @@
-
 // Product types
 export interface Product {
   id: string;
@@ -39,7 +38,7 @@ export interface SubitemCreateInput {
   title: string;
   subtitle?: string;
   description: string;
-  lastUpdatedBy?: string;
+  last_updated_by?: string;
 }
 
 // Scenario types
@@ -52,12 +51,13 @@ export interface Scenario {
   created_at?: string;
   updated_by?: string;
   updated_at?: string;
+  items?: Item[];
 }
 
 export interface ScenarioCreateInput {
   title: string;
   description: string;
-  formattedDescription?: string;
+  formatted_description?: string;
 }
 
 // Scenario item types
@@ -66,4 +66,5 @@ export interface ScenarioItem {
   item_id: string;
   created_by?: string;
   created_at?: string;
+  title?: string;
 }
