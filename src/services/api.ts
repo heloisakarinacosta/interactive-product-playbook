@@ -1,4 +1,6 @@
+
 import axios from 'axios';
+import { toast } from 'sonner';
 
 // Determine API URL based on environment
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -11,6 +13,8 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Add timeout to prevent long waiting when server is down
+  timeout: 10000,
 });
 
 // Add request interceptor for debugging
@@ -46,6 +50,10 @@ api.interceptors.response.use(
     } else if (error.request) {
       // The request was made but no response was received
       console.error('No response received:', error.request);
+      // Show a user-friendly message when server is down
+      if (error.code === 'ECONNABORTED' || !error.response) {
+        toast.error('Servidor API não está respondendo. Verifique se o servidor está rodando em ' + API_URL);
+      }
     } else {
       // Something happened in setting up the request that triggered an Error
       console.error('Request setup error:', error.message);
@@ -143,6 +151,7 @@ export const createSubitem = async (itemId: string, subitemData: {
       subtitle: subitemData.subtitle || null,
       description: subitemData.description,
       item_id: itemId,
+      // Use last_updated_by instead of lastUpdatedBy to match DB field names
       last_updated_by: subitemData.lastUpdatedBy || 'system',
       last_updated_at: new Date().toISOString(),
     });
@@ -165,6 +174,7 @@ export const updateSubitem = async (id: string, subitemData: {
       title: subitemData.title,
       subtitle: subitemData.subtitle || null,
       description: subitemData.description,
+      // Use last_updated_by instead of lastUpdatedBy to match DB field names
       last_updated_by: subitemData.lastUpdatedBy || 'system',
       last_updated_at: new Date().toISOString(),
     });
