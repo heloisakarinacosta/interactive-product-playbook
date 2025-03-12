@@ -14,7 +14,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   // Add timeout to prevent long waiting when server is down
-  timeout: 10000,
+  timeout: 15000, // Increased timeout for slower connections
 });
 
 // Add request interceptor for debugging
@@ -47,16 +47,29 @@ api.interceptors.response.use(
       console.error('Response error data:', error.response.data);
       console.error('Response error status:', error.response.status);
       console.error('Response error headers:', error.response.headers);
+      
+      // Show user-friendly toast based on status code
+      if (error.response.status === 404) {
+        toast.error(`API endpoint não encontrado: ${error.config.url}`);
+      } else if (error.response.status >= 500) {
+        toast.error(`Erro no servidor: ${error.response.data.message || 'Erro interno'}`);
+      } else {
+        toast.error(`Erro: ${error.response.data.message || 'Erro na comunicação com API'}`);
+      }
     } else if (error.request) {
       // The request was made but no response was received
       console.error('No response received:', error.request);
       // Show a user-friendly message when server is down
       if (error.code === 'ECONNABORTED' || !error.response) {
-        toast.error('Servidor API não está respondendo. Verifique se o servidor está rodando em ' + API_URL);
+        toast.error(`Servidor API não está respondendo. Verifique se o servidor está rodando em ${API_URL}`, {
+          duration: 6000, // Show longer
+          position: 'top-center',
+        });
       }
     } else {
       // Something happened in setting up the request that triggered an Error
       console.error('Request setup error:', error.message);
+      toast.error(`Erro de configuração da requisição: ${error.message}`);
     }
     return Promise.reject(error);
   }
