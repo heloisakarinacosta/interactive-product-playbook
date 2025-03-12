@@ -1,27 +1,30 @@
 
-import api from './baseApi';
-import { Subitem, SubitemCreateInput } from '../types/api.types';
+import axios from 'axios';
+import { Subitem, SubitemCreateInput } from '@/types/api.types';
+import { API_URL } from './baseApi';
 
+// Endpoints
+const ITEMS_ENDPOINT = `${API_URL}/items`;
+
+// Service functions
 export const fetchSubitems = async (itemId: string): Promise<Subitem[]> => {
   try {
-    const response = await api.get(`/subitems/${itemId}`);
+    const response = await axios.get(`${ITEMS_ENDPOINT}/${itemId}/subitems`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching subitems for item ${itemId}:`, error);
-    return [];
+    throw error;
   }
 };
 
-export const createSubitem = async (itemId: string, subitemData: SubitemCreateInput): Promise<Subitem> => {
+export const createSubitem = async (
+  itemId: string,
+  subitemData: SubitemCreateInput
+): Promise<Subitem> => {
   try {
-    console.log(`Creating subitem for item ${itemId}:`, subitemData);
-    const response = await api.post(`/subitems`, { 
-      title: subitemData.title,
-      subtitle: subitemData.subtitle || null,
-      description: subitemData.description,
-      item_id: itemId,
-      last_updated_by: subitemData.lastUpdatedBy || 'system',
-      last_updated_at: new Date().toISOString(),
+    const response = await axios.post(`${ITEMS_ENDPOINT}/${itemId}/subitems`, {
+      ...subitemData,
+      last_updated_by: subitemData.last_updated_by
     });
     return response.data;
   } catch (error) {
@@ -30,18 +33,31 @@ export const createSubitem = async (itemId: string, subitemData: SubitemCreateIn
   }
 };
 
-export const updateSubitem = async (id: string, subitemData: SubitemCreateInput): Promise<Subitem> => {
+export const updateSubitem = async (
+  itemId: string,
+  subitemId: string,
+  subitemData: Partial<SubitemCreateInput>
+): Promise<Subitem> => {
   try {
-    const response = await api.put(`/subitems/${id}`, {
-      title: subitemData.title,
-      subtitle: subitemData.subtitle || null,
-      description: subitemData.description,
-      last_updated_by: subitemData.lastUpdatedBy || 'system',
-      last_updated_at: new Date().toISOString(),
+    const response = await axios.put(`${ITEMS_ENDPOINT}/${itemId}/subitems/${subitemId}`, {
+      ...subitemData,
+      last_updated_by: subitemData.last_updated_by
     });
     return response.data;
   } catch (error) {
-    console.error(`Error updating subitem ${id}:`, error);
+    console.error(`Error updating subitem ${subitemId}:`, error);
+    throw error;
+  }
+};
+
+export const deleteSubitem = async (
+  itemId: string,
+  subitemId: string
+): Promise<void> => {
+  try {
+    await axios.delete(`${ITEMS_ENDPOINT}/${itemId}/subitems/${subitemId}`);
+  } catch (error) {
+    console.error(`Error deleting subitem ${subitemId}:`, error);
     throw error;
   }
 };

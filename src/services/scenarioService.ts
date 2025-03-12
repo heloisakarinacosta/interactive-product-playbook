@@ -1,29 +1,28 @@
 
-import api from './baseApi';
-import { Scenario, ScenarioCreateInput } from '../types/api.types';
+import axios from 'axios';
+import { Scenario, ScenarioCreateInput } from '@/types/api.types';
+import { API_URL } from './baseApi';
 
+// Endpoints
+const SCENARIOS_ENDPOINT = `${API_URL}/scenarios`;
+
+// Service functions
 export const fetchScenarios = async (): Promise<Scenario[]> => {
   try {
-    const response = await api.get('/scenarios');
+    const response = await axios.get(SCENARIOS_ENDPOINT);
     return response.data;
   } catch (error) {
     console.error('Error fetching scenarios:', error);
-    return [];
+    throw error;
   }
 };
 
 export const createScenario = async (scenarioData: ScenarioCreateInput): Promise<Scenario> => {
   try {
-    console.log('Creating scenario:', scenarioData);
-    const payload = {
-      title: scenarioData.title,
-      description: scenarioData.description,
-      formatted_description: scenarioData.formattedDescription || null,
-      created_by: 'admin',
-      created_at: new Date().toISOString(),
-    };
-    console.log('Payload:', payload);
-    const response = await api.post('/scenarios', payload);
+    const response = await axios.post(SCENARIOS_ENDPOINT, {
+      ...scenarioData,
+      formatted_description: scenarioData.formatted_description
+    });
     return response.data;
   } catch (error) {
     console.error('Error creating scenario:', error);
@@ -31,20 +30,27 @@ export const createScenario = async (scenarioData: ScenarioCreateInput): Promise
   }
 };
 
-export const updateScenario = async (id: string, scenarioData: ScenarioCreateInput): Promise<Scenario> => {
+export const updateScenario = async (
+  id: string,
+  scenarioData: Partial<ScenarioCreateInput>
+): Promise<Scenario> => {
   try {
-    const payload = {
-      title: scenarioData.title,
-      description: scenarioData.description,
-      formatted_description: scenarioData.formattedDescription || null,
-      updated_by: 'admin',
-      updated_at: new Date().toISOString(),
-    };
-    console.log('Updating scenario with payload:', payload);
-    const response = await api.put(`/scenarios/${id}`, payload);
+    const response = await axios.put(`${SCENARIOS_ENDPOINT}/${id}`, {
+      ...scenarioData,
+      formatted_description: scenarioData.formatted_description
+    });
     return response.data;
   } catch (error) {
     console.error(`Error updating scenario ${id}:`, error);
+    throw error;
+  }
+};
+
+export const deleteScenario = async (id: string): Promise<void> => {
+  try {
+    await axios.delete(`${SCENARIOS_ENDPOINT}/${id}`);
+  } catch (error) {
+    console.error(`Error deleting scenario ${id}:`, error);
     throw error;
   }
 };

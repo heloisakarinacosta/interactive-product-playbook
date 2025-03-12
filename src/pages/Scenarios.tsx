@@ -20,6 +20,7 @@ const ScenariosPage = () => {
   const [subitemVisibility, setSubitemVisibility] = useState<Record<string, boolean>>({});
   const [itemSubitems, setItemSubitems] = useState<Record<string, Subitem[]>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedProductItems, setSelectedProductItems] = useState<string[]>([]);
 
   // Fetch scenarios
   const { 
@@ -147,7 +148,7 @@ const ScenariosPage = () => {
     createScenarioMutation.mutate({
       title: 'Novo Cenário',
       description: 'Descrição do novo cenário',
-      formattedDescription: '<p>Descrição do novo cenário</p>'
+      formatted_description: '<p>Descrição do novo cenário</p>'
     }, {
       onSettled: () => setIsLoading(false)
     });
@@ -159,7 +160,7 @@ const ScenariosPage = () => {
       data: { 
         title, 
         description,
-        formattedDescription: description 
+        formatted_description: description 
       },
     });
   };
