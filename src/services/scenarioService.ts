@@ -1,29 +1,25 @@
 
 import api from './baseApi';
+import { Scenario, ScenarioCreateInput } from '../types/api.types';
 
-// Scenarios API
-export const fetchScenarios = async () => {
+export const fetchScenarios = async (): Promise<Scenario[]> => {
   try {
     const response = await api.get('/scenarios');
     return response.data;
   } catch (error) {
     console.error('Error fetching scenarios:', error);
-    return []; // Return empty array instead of throwing
+    return [];
   }
 };
 
-export const createScenario = async (scenarioData: { 
-  title: string; 
-  description: string;
-  formattedDescription?: string;
-}) => {
+export const createScenario = async (scenarioData: ScenarioCreateInput): Promise<Scenario> => {
   try {
     console.log('Creating scenario:', scenarioData);
     const payload = {
       title: scenarioData.title,
       description: scenarioData.description,
       formatted_description: scenarioData.formattedDescription || null,
-      created_by: 'admin', // This should come from auth context
+      created_by: 'admin',
       created_at: new Date().toISOString(),
     };
     console.log('Payload:', payload);
@@ -35,17 +31,13 @@ export const createScenario = async (scenarioData: {
   }
 };
 
-export const updateScenario = async (id: string, scenarioData: {
-  title: string;
-  description: string;
-  formattedDescription?: string;
-}) => {
+export const updateScenario = async (id: string, scenarioData: ScenarioCreateInput): Promise<Scenario> => {
   try {
     const payload = {
       title: scenarioData.title,
       description: scenarioData.description,
       formatted_description: scenarioData.formattedDescription || null,
-      updated_by: 'admin', // This should come from auth context
+      updated_by: 'admin',
       updated_at: new Date().toISOString(),
     };
     console.log('Updating scenario with payload:', payload);

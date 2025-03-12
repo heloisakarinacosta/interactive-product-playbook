@@ -1,32 +1,25 @@
 
 import api from './baseApi';
+import { Subitem, SubitemCreateInput } from '../types/api.types';
 
-// Subitems API
-export const fetchSubitems = async (itemId: string) => {
+export const fetchSubitems = async (itemId: string): Promise<Subitem[]> => {
   try {
     const response = await api.get(`/subitems/${itemId}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching subitems for item ${itemId}:`, error);
-    return []; // Return empty array instead of throwing
+    return [];
   }
 };
 
-export const createSubitem = async (itemId: string, subitemData: { 
-  title: string; 
-  subtitle?: string;
-  description: string;
-  lastUpdatedBy?: string;
-}) => {
+export const createSubitem = async (itemId: string, subitemData: SubitemCreateInput): Promise<Subitem> => {
   try {
     console.log(`Creating subitem for item ${itemId}:`, subitemData);
-    // Map frontend field names to backend field names
     const response = await api.post(`/subitems`, { 
       title: subitemData.title,
       subtitle: subitemData.subtitle || null,
       description: subitemData.description,
       item_id: itemId,
-      // Use last_updated_by instead of lastUpdatedBy to match DB field names
       last_updated_by: subitemData.lastUpdatedBy || 'system',
       last_updated_at: new Date().toISOString(),
     });
@@ -37,19 +30,12 @@ export const createSubitem = async (itemId: string, subitemData: {
   }
 };
 
-export const updateSubitem = async (id: string, subitemData: { 
-  title: string; 
-  subtitle?: string;
-  description: string;
-  lastUpdatedBy?: string;
-}) => {
+export const updateSubitem = async (id: string, subitemData: SubitemCreateInput): Promise<Subitem> => {
   try {
-    // Map frontend field names to backend field names
     const response = await api.put(`/subitems/${id}`, {
       title: subitemData.title,
       subtitle: subitemData.subtitle || null,
       description: subitemData.description,
-      // Use last_updated_by instead of lastUpdatedBy to match DB field names
       last_updated_by: subitemData.lastUpdatedBy || 'system',
       last_updated_at: new Date().toISOString(),
     });

@@ -1,8 +1,8 @@
 
 import api from './baseApi';
+import { Item, ItemCreateInput } from '../types/api.types';
 
-// Items API
-export const fetchItems = async (productId: string) => {
+export const fetchItems = async (productId: string): Promise<Item[]> => {
   try {
     const response = await api.get(`/items/${productId}`);
     return response.data;
@@ -12,7 +12,7 @@ export const fetchItems = async (productId: string) => {
   }
 };
 
-export const createItem = async (productId: string, itemData: { title: string }) => {
+export const createItem = async (productId: string, itemData: { title: string }): Promise<Item> => {
   try {
     console.log('Creating item for product:', productId, itemData);
     const response = await api.post(`/items`, { ...itemData, product_id: productId });
@@ -23,7 +23,7 @@ export const createItem = async (productId: string, itemData: { title: string })
   }
 };
 
-export const updateItem = async (id: string, itemData: { title: string }) => {
+export const updateItem = async (id: string, itemData: { title: string }): Promise<Item> => {
   try {
     console.log(`Updating item ${id} with data:`, itemData);
     const response = await api.put(`/items/${id}`, itemData);

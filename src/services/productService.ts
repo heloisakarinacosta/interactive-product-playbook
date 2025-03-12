@@ -1,9 +1,8 @@
 
 import api from './baseApi';
-import { toast } from 'sonner';
+import { Product, ProductCreateInput } from '../types/api.types';
 
-// Products API
-export const fetchProducts = async () => {
+export const fetchProducts = async (): Promise<Product[]> => {
   try {
     const response = await api.get('/products');
     return response.data;
@@ -13,7 +12,7 @@ export const fetchProducts = async () => {
   }
 };
 
-export const createProduct = async (productData: { title: string; description: string }) => {
+export const createProduct = async (productData: ProductCreateInput): Promise<Product> => {
   try {
     const response = await api.post('/products', productData);
     return response.data;
@@ -23,7 +22,7 @@ export const createProduct = async (productData: { title: string; description: s
   }
 };
 
-export const updateProduct = async (id: string, productData: { title: string; description: string }) => {
+export const updateProduct = async (id: string, productData: ProductCreateInput): Promise<Product> => {
   try {
     const response = await api.put(`/products/${id}`, productData);
     return response.data;
