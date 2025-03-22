@@ -1,9 +1,11 @@
+
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { cspMiddleware } from '../middleware/csp';
 import { query, initDatabase } from '../utils/dbUtils';
+import { ensureDatabaseConnection } from '../utils/dbTester';
 import { ResultSetHeader } from 'mysql2';
 
 // Fix for __dirname in ES modules
@@ -24,6 +26,8 @@ app.use(express.urlencoded({ extended: true }));
 // Determine if we're in production (not using Vite for development)
 const isProduction = process.env.NODE_ENV === 'production';
 
+console.log(`Iniciando servidor no modo: ${isProduction ? 'produção' : 'desenvolvimento'}`);
+
 // In production, serve static files from the dist directory
 if (isProduction) {
   console.log('Running in production mode, serving static files from dist');
@@ -34,14 +38,41 @@ if (isProduction) {
   app.use(express.static(path.join(__dirname, '../../public')));
 }
 
-// Initialize database
-initDatabase()
-  .then(() => {
-    console.log('Database initialized successfully');
-  })
-  .catch((error) => {
-    console.error('Failed to initialize database:', error);
-  });
+// Rota de status para verificar se o servidor está funcionando
+app.get('/api/status', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+// Initialize database and start server
+const startServer = async () => {
+  try {
+    // Primeiro verifica a conexão com o banco de dados
+    const dbConnected = await ensureDatabaseConnection(3, 2000);
+    
+    if (!dbConnected) {
+      console.error('Não foi possível estabelecer conexão com o banco de dados.');
+      console.log('O servidor será iniciado, mas as operações do banco de dados podem falhar.');
+    }
+    
+    // Tenta inicializar o banco de dados (criar tabelas)
+    try {
+      await initDatabase();
+      console.log('Banco de dados inicializado com sucesso!');
+    } catch (dbError) {
+      console.error('Erro ao inicializar banco de dados:', dbError);
+      console.log('O servidor será iniciado, mas as operações do banco de dados podem falhar.');
+    }
+    
+    // Inicia o servidor
+    app.listen(PORT, () => {
+      console.log(`✅ Servidor rodando na porta ${PORT}`);
+      console.log(`URL do servidor: http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error('Erro ao iniciar servidor:', error);
+    process.exit(1);
+  }
+};
 
 // API routes
 
@@ -330,7 +361,5 @@ if (isProduction) {
   });
 }
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Iniciar o servidor
+startServer();
