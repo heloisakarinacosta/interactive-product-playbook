@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import DetailModal from '@/components/ui/DetailModal';
 import ScenarioList from '@/components/scenarios/ScenarioList';
 import ScenarioItemList from '@/components/scenarios/ScenarioItemList';
