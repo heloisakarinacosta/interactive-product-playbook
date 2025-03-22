@@ -17,13 +17,21 @@ const api = axios.create({
   timeout: 15000, // Increased timeout for slower connections
 });
 
+// Block list for domains we don't want to allow
+const BLOCKED_DOMAINS = ['productfruits.com', 'facebook.com/tr'];
+
 // Add request interceptor for debugging
 api.interceptors.request.use(
   (config) => {
-    // Block requests to productfruits.com
-    if (config.url && (config.url.includes('productfruits.com') || config.baseURL?.includes('productfruits.com'))) {
-      console.warn('Blocked request to productfruits.com:', config.url);
-      return Promise.reject(new Error('Request blocked by CSP'));
+    // Check if the URL contains any blocked domain
+    const isBlocked = BLOCKED_DOMAINS.some(domain => 
+      (config.url && config.url.includes(domain)) || 
+      (config.baseURL && config.baseURL.includes(domain))
+    );
+    
+    if (isBlocked) {
+      console.warn('Blocked request to restricted domain:', config.url);
+      return Promise.reject(new Error('Request blocked by security policy'));
     }
     
     console.log(`🚀 Making ${config.method?.toUpperCase()} request to ${config.url}`);
