@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -171,6 +170,141 @@ app.put('/api/subitems/:id', async (req, res) => {
   } catch (error) {
     console.error('Error updating subitem:', error);
     res.status(500).json({ error: 'Failed to update subitem' });
+  }
+});
+
+// Scenarios routes
+app.get('/api/scenarios', async (req, res) => {
+  try {
+    const scenarios = await query('SELECT * FROM scenarios ORDER BY updated_at DESC');
+    res.json(scenarios);
+  } catch (error) {
+    console.error('Error fetching scenarios:', error);
+    res.status(500).json({ error: 'Failed to fetch scenarios' });
+  }
+});
+
+app.post('/api/scenarios', async (req, res) => {
+  try {
+    const { title, description, formatted_description } = req.body;
+    const result = await query(
+      'INSERT INTO scenarios (title, description, formatted_description, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())',
+      [title, description, formatted_description]
+    );
+    
+    const resultHeader = result as ResultSetHeader;
+    const newScenarioId = resultHeader.insertId;
+    
+    const newScenario = await query('SELECT * FROM scenarios WHERE id = ?', [newScenarioId]);
+    
+    res.status(201).json(Array.isArray(newScenario) ? newScenario[0] : newScenario);
+  } catch (error) {
+    console.error('Error creating scenario:', error);
+    res.status(500).json({ error: 'Failed to create scenario' });
+  }
+});
+
+app.put('/api/scenarios/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, formatted_description } = req.body;
+    
+    await query(
+      'UPDATE scenarios SET title = ?, description = ?, formatted_description = ?, updated_at = NOW() WHERE id = ?',
+      [title, description, formatted_description, id]
+    );
+    
+    const updated = await query('SELECT * FROM scenarios WHERE id = ?', [id]);
+    res.json(Array.isArray(updated) ? updated[0] : updated);
+  } catch (error) {
+    console.error('Error updating scenario:', error);
+    res.status(500).json({ error: 'Failed to update scenario' });
+  }
+});
+
+// Scenario items routes
+app.get('/api/scenarios/:scenarioId/items', async (req, res) => {
+  try {
+    const { scenarioId } = req.params;
+    const items = await query(
+      'SELECT * FROM scenario_items WHERE scenario_id = ? ORDER BY created_at DESC',
+      [scenarioId]
+    );
+    res.json(items);
+  } catch (error) {
+    console.error('Error fetching scenario items:', error);
+    res.status(500).json({ error: 'Failed to fetch scenario items' });
+  }
+});
+
+app.post('/api/scenarios/:scenarioId/items/:itemId', async (req, res) => {
+  try {
+    const { scenarioId, itemId } = req.params;
+    const result = await query(
+      'INSERT INTO scenario_items (scenario_id, item_id, created_at, updated_at) VALUES (?, ?, NOW(), NOW())',
+      [scenarioId, itemId]
+    );
+    
+    const resultHeader = result as ResultSetHeader;
+    const newLinkId = resultHeader.insertId;
+    
+    const newLink = await query('SELECT * FROM scenario_items WHERE id = ?', [newLinkId]);
+    
+    res.status(201).json(Array.isArray(newLink) ? newLink[0] : newLink);
+  } catch (error) {
+    console.error('Error linking item to scenario:', error);
+    res.status(500).json({ error: 'Failed to link item to scenario' });
+  }
+});
+
+app.post('/api/scenarios/:scenarioId/items/:itemId/subitems/:subitemId/visibility', async (req, res) => {
+  try {
+    const { scenarioId, itemId, subitemId } = req.params;
+    const { isVisible } = req.body;
+    
+    // Check if record exists
+    const existingRecords = await query(
+      'SELECT * FROM subitem_visibility WHERE scenario_id = ? AND item_id = ? AND subitem_id = ?',
+      [scenarioId, itemId, subitemId]
+    );
+    
+    if (Array.isArray(existingRecords) && existingRecords.length > 0) {
+      // Update existing record
+      await query(
+        'UPDATE subitem_visibility SET is_visible = ?, updated_at = NOW() WHERE scenario_id = ? AND item_id = ? AND subitem_id = ?',
+        [isVisible, scenarioId, itemId, subitemId]
+      );
+    } else {
+      // Create new record
+      await query(
+        'INSERT INTO subitem_visibility (scenario_id, item_id, subitem_id, is_visible, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
+        [scenarioId, itemId, subitemId, isVisible]
+      );
+    }
+    
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Error updating subitem visibility:', error);
+    res.status(500).json({ error: 'Failed to update subitem visibility' });
+  }
+});
+
+app.get('/api/scenarios/:scenarioId/items/:itemId/subitems', async (req, res) => {
+  try {
+    const { scenarioId, itemId } = req.params;
+    
+    // Get all subitems for the item
+    const subitems = await query(
+      'SELECT s.*, COALESCE(sv.is_visible, 1) as is_visible FROM subitems s ' +
+      'LEFT JOIN subitem_visibility sv ON s.id = sv.subitem_id AND sv.scenario_id = ? AND sv.item_id = ? ' +
+      'WHERE s.item_id = ? ORDER BY s.created_at DESC',
+      [scenarioId, itemId, itemId]
+    );
+    
+    res.json(subitems);
+  } catch (error) {
+    console.error('Error fetching subitems with visibility:', error);
+    res.status(500).json({ error: 'Failed to fetch subitems with visibility' });
   }
 });
 

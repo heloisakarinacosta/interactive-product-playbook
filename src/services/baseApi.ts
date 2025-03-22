@@ -52,20 +52,18 @@ api.interceptors.response.use(
       if (error.response.status === 404) {
         toast.error(`API endpoint não encontrado: ${error.config.url}`);
       } else if (error.response.status >= 500) {
-        toast.error(`Erro no servidor: ${error.response.data.message || 'Erro interno'}`);
+        toast.error(`Erro no servidor: ${error.response.data?.message || 'Erro interno'}`);
       } else {
-        toast.error(`Erro: ${error.response.data.message || 'Erro na comunicação com API'}`);
+        toast.error(`Erro: ${error.response.data?.message || 'Erro na comunicação com API'}`);
       }
     } else if (error.request) {
       // The request was made but no response was received
       console.error('No response received:', error.request);
       // Show a user-friendly message when server is down
-      if (error.code === 'ECONNABORTED' || !error.response) {
-        toast.error(`Servidor API não está respondendo. Verifique se o servidor está rodando em ${API_URL}`, {
-          duration: 6000, // Show longer
-          position: 'top-center',
-        });
-      }
+      toast.error(`Servidor API não está respondendo. Verifique se o servidor está rodando.`, {
+        duration: 6000, // Show longer
+        position: 'top-center',
+      });
     } else {
       // Something happened in setting up the request that triggered an Error
       console.error('Request setup error:', error.message);
