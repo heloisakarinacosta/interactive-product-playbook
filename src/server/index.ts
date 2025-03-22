@@ -21,8 +21,18 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, '../../public')));
+// Determine if we're in production (not using Vite for development)
+const isProduction = process.env.NODE_ENV === 'production';
+
+// In production, serve static files from the dist directory
+if (isProduction) {
+  console.log('Running in production mode, serving static files from dist');
+  app.use(express.static(path.join(__dirname, '../../../dist')));
+} else {
+  // In development, serve static files from the public directory
+  console.log('Running in development mode, serving static files from public');
+  app.use(express.static(path.join(__dirname, '../../public')));
+}
 
 // Initialize database
 initDatabase()
@@ -307,6 +317,18 @@ app.get('/api/scenarios/:scenarioId/items/:itemId/subitems', async (req, res) =>
     res.status(500).json({ error: 'Failed to fetch subitems with visibility' });
   }
 });
+
+// Catch-all route to serve index.html for client-side routing in production
+if (isProduction) {
+  app.get('*', (req, res) => {
+    // Only catch routes that don't start with /api
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.join(__dirname, '../../../dist/index.html'));
+    } else {
+      res.status(404).json({ error: 'API endpoint not found' });
+    }
+  });
+}
 
 // Start the server
 app.listen(PORT, () => {

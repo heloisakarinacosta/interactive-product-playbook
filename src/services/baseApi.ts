@@ -20,6 +20,12 @@ const api = axios.create({
 // Add request interceptor for debugging
 api.interceptors.request.use(
   (config) => {
+    // Block requests to productfruits.com
+    if (config.url && (config.url.includes('productfruits.com') || config.baseURL?.includes('productfruits.com'))) {
+      console.warn('Blocked request to productfruits.com:', config.url);
+      return Promise.reject(new Error('Request blocked by CSP'));
+    }
+    
     console.log(`🚀 Making ${config.method?.toUpperCase()} request to ${config.url}`);
     // Log request body for debugging if it exists
     if (config.data) {
