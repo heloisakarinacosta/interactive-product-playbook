@@ -1,11 +1,15 @@
 
-import api from './baseApi';
+import axios from 'axios';
 import { Subitem, SubitemCreateInput } from '@/types/api.types';
+import api from './baseApi';
+
+// Endpoints
+const ITEMS_ENDPOINT = `${api.defaults.baseURL}/items`;
 
 // Service functions
 export const fetchSubitems = async (itemId: string): Promise<Subitem[]> => {
   try {
-    const response = await api.get(`/items/${itemId}/subitems`);
+    const response = await axios.get(`${ITEMS_ENDPOINT}/${itemId}/subitems`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching subitems for item ${itemId}:`, error);
@@ -18,7 +22,7 @@ export const createSubitem = async (
   subitemData: SubitemCreateInput
 ): Promise<Subitem> => {
   try {
-    const response = await api.post(`/items/${itemId}/subitems`, {
+    const response = await axios.post(`${ITEMS_ENDPOINT}/${itemId}/subitems`, {
       ...subitemData,
       last_updated_by: subitemData.last_updated_by
     });
@@ -35,7 +39,7 @@ export const updateSubitem = async (
   subitemData: Partial<SubitemCreateInput>
 ): Promise<Subitem> => {
   try {
-    const response = await api.put(`/items/${itemId}/subitems/${subitemId}`, {
+    const response = await axios.put(`${ITEMS_ENDPOINT}/${itemId}/subitems/${subitemId}`, {
       ...subitemData,
       last_updated_by: subitemData.last_updated_by
     });
@@ -51,7 +55,7 @@ export const deleteSubitem = async (
   subitemId: string
 ): Promise<void> => {
   try {
-    await api.delete(`/items/${itemId}/subitems/${subitemId}`);
+    await axios.delete(`${ITEMS_ENDPOINT}/${itemId}/subitems/${subitemId}`);
   } catch (error) {
     console.error(`Error deleting subitem ${subitemId}:`, error);
     throw error;

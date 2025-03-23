@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { toast } from 'sonner';
 
-// Determine API URL based on environment - use relative path for production
+// Determine API URL based on environment
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 console.log('Using API URL:', API_URL); // Debug log

@@ -1,10 +1,15 @@
 
-import api from './baseApi';
+import axios from 'axios';
 import { Scenario, ScenarioCreateInput } from '@/types/api.types';
+import api from './baseApi';
 
+// Endpoints
+const SCENARIOS_ENDPOINT = `${api.defaults.baseURL}/scenarios`;
+
+// Service functions
 export const fetchScenarios = async (): Promise<Scenario[]> => {
   try {
-    const response = await api.get('/scenarios');
+    const response = await axios.get(SCENARIOS_ENDPOINT);
     return response.data;
   } catch (error) {
     console.error('Error fetching scenarios:', error);
@@ -14,7 +19,7 @@ export const fetchScenarios = async (): Promise<Scenario[]> => {
 
 export const createScenario = async (scenarioData: ScenarioCreateInput): Promise<Scenario> => {
   try {
-    const response = await api.post('/scenarios', {
+    const response = await axios.post(SCENARIOS_ENDPOINT, {
       ...scenarioData,
       formatted_description: scenarioData.formatted_description
     });
@@ -30,7 +35,7 @@ export const updateScenario = async (
   scenarioData: Partial<ScenarioCreateInput>
 ): Promise<Scenario> => {
   try {
-    const response = await api.put(`/scenarios/${id}`, {
+    const response = await axios.put(`${SCENARIOS_ENDPOINT}/${id}`, {
       ...scenarioData,
       formatted_description: scenarioData.formatted_description
     });
@@ -43,7 +48,7 @@ export const updateScenario = async (
 
 export const deleteScenario = async (id: string): Promise<void> => {
   try {
-    await api.delete(`/scenarios/${id}`);
+    await axios.delete(`${SCENARIOS_ENDPOINT}/${id}`);
   } catch (error) {
     console.error(`Error deleting scenario ${id}:`, error);
     throw error;
