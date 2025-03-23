@@ -125,7 +125,14 @@ const ItemCard: React.FC<ItemCardProps> = ({
               type="text"
               value={editedTitle}
               onChange={(e) => setEditedTitle(e.target.value)}
-              onKeyDown={handleInputKeyDown}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSave(e as unknown as React.MouseEvent);
+                } else if (e.key === 'Escape') {
+                  setEditing(false);
+                  setEditedTitle(title); // Reset to original
+                }
+              }}
               className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="Título"
               autoFocus
@@ -180,7 +187,12 @@ const ItemCard: React.FC<ItemCardProps> = ({
               </Button>
             )}
             
-            <Button variant="outline" size="sm" onClick={handleAddSubitem}>
+            <Button variant="outline" size="sm" onClick={(e) => {
+              e.stopPropagation();
+              if (onAddSubitem) {
+                onAddSubitem(id);
+              }
+            }}>
               <Plus size={14} className="mr-1" /> Adicionar
             </Button>
           </>

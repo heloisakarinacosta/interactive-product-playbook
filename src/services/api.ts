@@ -1,6 +1,5 @@
 
 import axios from 'axios';
-import { toast } from 'sonner';
 
 // Determine API URL based on environment
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -13,8 +12,6 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  // Add timeout to prevent long waiting when server is down
-  timeout: 15000, // Increased timeout for slower connections
 });
 
 // Add request interceptor for debugging
@@ -47,29 +44,12 @@ api.interceptors.response.use(
       console.error('Response error data:', error.response.data);
       console.error('Response error status:', error.response.status);
       console.error('Response error headers:', error.response.headers);
-      
-      // Show user-friendly toast based on status code
-      if (error.response.status === 404) {
-        toast.error(`API endpoint não encontrado: ${error.config.url}`);
-      } else if (error.response.status >= 500) {
-        toast.error(`Erro no servidor: ${error.response.data.message || 'Erro interno'}`);
-      } else {
-        toast.error(`Erro: ${error.response.data.message || 'Erro na comunicação com API'}`);
-      }
     } else if (error.request) {
       // The request was made but no response was received
       console.error('No response received:', error.request);
-      // Show a user-friendly message when server is down
-      if (error.code === 'ECONNABORTED' || !error.response) {
-        toast.error(`Servidor API não está respondendo. Verifique se o servidor está rodando em ${API_URL}`, {
-          duration: 6000, // Show longer
-          position: 'top-center',
-        });
-      }
     } else {
       // Something happened in setting up the request that triggered an Error
       console.error('Request setup error:', error.message);
-      toast.error(`Erro de configuração da requisição: ${error.message}`);
     }
     return Promise.reject(error);
   }
@@ -158,15 +138,10 @@ export const createSubitem = async (itemId: string, subitemData: {
 }) => {
   try {
     console.log(`Creating subitem for item ${itemId}:`, subitemData);
-    // Map frontend field names to backend field names
     const response = await api.post(`/subitems`, { 
-      title: subitemData.title,
-      subtitle: subitemData.subtitle || null,
-      description: subitemData.description,
+      ...subitemData, 
       item_id: itemId,
-      // Use last_updated_by instead of lastUpdatedBy to match DB field names
       last_updated_by: subitemData.lastUpdatedBy || 'system',
-      last_updated_at: new Date().toISOString(),
     });
     return response.data;
   } catch (error) {
@@ -182,18 +157,49 @@ export const updateSubitem = async (id: string, subitemData: {
   lastUpdatedBy?: string;
 }) => {
   try {
-    // Map frontend field names to backend field names
     const response = await api.put(`/subitems/${id}`, {
-      title: subitemData.title,
-      subtitle: subitemData.subtitle || null,
-      description: subitemData.description,
-      // Use last_updated_by instead of lastUpdatedBy to match DB field names
+      ...subitemData,
       last_updated_by: subitemData.lastUpdatedBy || 'system',
-      last_updated_at: new Date().toISOString(),
     });
     return response.data;
   } catch (error) {
     console.error(`Error updating subitem ${id}:`, error);
+    throw error;
+  }
+};
+
+// Scenario Items API
+export const fetchScenarioItems = async (scenarioId: string) => {
+  try {
+    const response = await api.get(`/scenario-items/${scenarioId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching items for scenario ${scenarioId}:`, error);
+    return []; // Return empty array instead of throwing
+  }
+};
+
+export const linkItemToScenario = async (scenarioId: string, itemId: string) => {
+  try {
+    const response = await api.post(`/scenario-items`, {
+      scenario_id: scenarioId,
+      item_id: itemId,
+      created_by: 'admin', // This should come from the auth context
+      created_at: new Date().toISOString(),
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Error linking item ${itemId} to scenario ${scenarioId}:`, error);
+    throw error;
+  }
+};
+
+export const unlinkItemFromScenario = async (scenarioId: string, itemId: string) => {
+  try {
+    const response = await api.delete(`/scenario-items/${scenarioId}/${itemId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error unlinking item ${itemId} from scenario ${scenarioId}:`, error);
     throw error;
   }
 };
@@ -216,15 +222,7 @@ export const createScenario = async (scenarioData: {
 }) => {
   try {
     console.log('Creating scenario:', scenarioData);
-    const payload = {
-      title: scenarioData.title,
-      description: scenarioData.description,
-      formatted_description: scenarioData.formattedDescription || null,
-      created_by: 'admin', // This should come from auth context
-      created_at: new Date().toISOString(),
-    };
-    console.log('Payload:', payload);
-    const response = await api.post('/scenarios', payload);
+    const response = await api.post('/scenarios', scenarioData);
     return response.data;
   } catch (error) {
     console.error('Error creating scenario:', error);
@@ -238,56 +236,10 @@ export const updateScenario = async (id: string, scenarioData: {
   formattedDescription?: string;
 }) => {
   try {
-    const payload = {
-      title: scenarioData.title,
-      description: scenarioData.description,
-      formatted_description: scenarioData.formattedDescription || null,
-      updated_by: 'admin', // This should come from auth context
-      updated_at: new Date().toISOString(),
-    };
-    console.log('Updating scenario with payload:', payload);
-    const response = await api.put(`/scenarios/${id}`, payload);
+    const response = await api.put(`/scenarios/${id}`, scenarioData);
     return response.data;
   } catch (error) {
     console.error(`Error updating scenario ${id}:`, error);
-    throw error;
-  }
-};
-
-// Scenario Items API
-export const fetchScenarioItems = async (scenarioId: string) => {
-  try {
-    const response = await api.get(`/scenario-items/${scenarioId}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching items for scenario ${scenarioId}:`, error);
-    return []; // Return empty array instead of throwing
-  }
-};
-
-export const linkItemToScenario = async (scenarioId: string, itemId: string) => {
-  try {
-    const payload = {
-      scenario_id: scenarioId,
-      item_id: itemId,
-      created_by: 'admin', // This should come from auth context
-      created_at: new Date().toISOString(),
-    };
-    console.log('Linking item to scenario with payload:', payload);
-    const response = await api.post(`/scenario-items`, payload);
-    return response.data;
-  } catch (error) {
-    console.error(`Error linking item ${itemId} to scenario ${scenarioId}:`, error);
-    throw error;
-  }
-};
-
-export const unlinkItemFromScenario = async (scenarioId: string, itemId: string) => {
-  try {
-    const response = await api.delete(`/scenario-items/${scenarioId}/${itemId}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error unlinking item ${itemId} from scenario ${scenarioId}:`, error);
     throw error;
   }
 };
@@ -300,16 +252,9 @@ export const updateSubitemVisibility = async (
   isVisible: boolean
 ) => {
   try {
-    const payload = {
-      scenario_id: scenarioId,
-      item_id: itemId,
-      subitem_id: subitemId,
+    const response = await api.put(`/scenario-subitems/${scenarioId}/${itemId}/${subitemId}/visibility`, {
       is_visible: isVisible,
-      updated_by: 'admin', // This should come from auth context
-      updated_at: new Date().toISOString(),
-    };
-    console.log('Updating subitem visibility with payload:', payload);
-    const response = await api.put(`/scenario-subitems/visibility`, payload);
+    });
     return response.data;
   } catch (error) {
     console.error(`Error updating visibility for subitem ${subitemId}:`, error);
