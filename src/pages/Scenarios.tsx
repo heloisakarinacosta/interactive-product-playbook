@@ -1,12 +1,11 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { Plus, Check, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Carousel from '@/components/ui/carousel';
 import ProductCard from '@/components/ui/ProductCard';
-import ItemCard, { Subitem } from '@/components/ui/ItemCard';
+import ItemCard from '@/components/ui/ItemCard';
 import DetailModal from '@/components/ui/DetailModal';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -22,14 +21,23 @@ import {
   getSubitemVisibility,
   fetchProducts,
   fetchItems,
-  fetchSubitems,
 } from '@/services/api';
+
+export interface Subitem {
+  id: string;
+  title: string;
+  subtitle?: string;
+  description: string;
+  lastUpdatedBy?: string;
+  lastUpdatedAt?: string;
+  hidden?: boolean;
+}
 
 type ProductItem = {
   id: string;
   title: string;
   productId?: string;
-  product_id?: string;
+  subitems?: Subitem[];
 };
 
 const ScenariosPage = () => {
@@ -43,72 +51,33 @@ const ScenariosPage = () => {
   const [selectedProductItems, setSelectedProductItems] = useState<string[]>([]);
   const [visibilityDialogOpen, setVisibilityDialogOpen] = useState(false);
   const [subitemVisibility, setSubitemVisibility] = useState<Record<string, boolean>>({});
-  const [itemSubitems, setItemSubitems] = useState<Record<string, Subitem[]>>({});
-  const [isLoading, setIsLoading] = useState(false);
 
   // Fetch scenarios
-  const { 
-    data: scenarios = [], 
-    isLoading: isLoadingScenarios,
-    refetch: refetchScenarios
-  } = useQuery({
+  const { data: scenarios = [], isLoading: isLoadingScenarios } = useQuery({
     queryKey: ['scenarios'],
     queryFn: fetchScenarios,
   });
 
   // Fetch scenario items
-  const { 
-    data: scenarioItems = [], 
-    isLoading: isLoadingItems,
-    refetch: refetchScenarioItems
-  } = useQuery({
+  const { data: scenarioItems = [], isLoading: isLoadingItems } = useQuery({
     queryKey: ['scenario-items', selectedScenario],
     queryFn: () => fetchScenarioItems(selectedScenario || ''),
     enabled: !!selectedScenario,
   });
 
-  // Fetch all products for item selection
+  // Fetch all products and their items for selection
   const { data: allProducts = [] } = useQuery({
     queryKey: ['products'],
     queryFn: fetchProducts,
   });
-
-  // Fetch subitems for selected items
-  useEffect(() => {
-    if (selectedScenario && scenarioItems.length > 0) {
-      // Fetch subitems for each item in the scenario
-      const fetchAllSubitems = async () => {
-        const newItemSubitems: Record<string, Subitem[]> = {};
-        
-        for (const item of scenarioItems) {
-          try {
-            const subitems = await fetchSubitems(item.item_id);
-            newItemSubitems[item.item_id] = subitems;
-          } catch (error) {
-            console.error(`Error fetching subitems for item ${item.item_id}:`, error);
-            newItemSubitems[item.item_id] = [];
-          }
-        }
-        
-        setItemSubitems(newItemSubitems);
-      };
-      
-      fetchAllSubitems();
-    }
-  }, [selectedScenario, scenarioItems]);
 
   // Mutations
   const createScenarioMutation = useMutation({
     mutationFn: createScenario,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scenarios'] });
-      refetchScenarios();
       toast.success('Novo cenário criado');
     },
-    onError: (error) => {
-      console.error('Error creating scenario:', error);
-      toast.error('Erro ao criar cenário');
-    }
   });
 
   const updateScenarioMutation = useMutation({
@@ -117,10 +86,6 @@ const ScenariosPage = () => {
       queryClient.invalidateQueries({ queryKey: ['scenarios'] });
       toast.success('Cenário atualizado');
     },
-    onError: (error) => {
-      console.error('Error updating scenario:', error);
-      toast.error('Erro ao atualizar cenário');
-    }
   });
 
   const linkItemMutation = useMutation({
@@ -129,14 +94,9 @@ const ScenariosPage = () => {
     onSuccess: () => {
       if (selectedScenario) {
         queryClient.invalidateQueries({ queryKey: ['scenario-items', selectedScenario] });
-        refetchScenarioItems();
       }
       toast.success('Item vinculado ao cenário');
     },
-    onError: (error) => {
-      console.error('Error linking item to scenario:', error);
-      toast.error('Erro ao vincular item ao cenário');
-    }
   });
 
   const updateVisibilityMutation = useMutation({
@@ -157,20 +117,13 @@ const ScenariosPage = () => {
       }
       toast.success('Visibilidade atualizada');
     },
-    onError: (error) => {
-      console.error('Error updating visibility:', error);
-      toast.error('Erro ao atualizar visibilidade');
-    }
   });
 
   // Handlers
   const handleAddScenario = () => {
-    setIsLoading(true);
     createScenarioMutation.mutate({
       title: 'Novo Cenário',
       description: 'Descrição do novo cenário',
-    }, {
-      onSettled: () => setIsLoading(false)
     });
   };
 
@@ -201,30 +154,13 @@ const ScenariosPage = () => {
   
   const handleSaveSelectedItems = () => {
     if (!selectedScenario) return;
-    setIsLoading(true);
     
-    // Process each selected item
-    const promises = selectedProductItems.map(itemId => {
-      // Check if item is already linked to scenario
-      const isAlreadyLinked = scenarioItems.some(item => item.item_id === itemId);
-      if (!isAlreadyLinked) {
-        return linkItemMutation.mutateAsync({ scenarioId: selectedScenario, itemId });
-      }
-      return Promise.resolve();
+    selectedProductItems.forEach(itemId => {
+      linkItemMutation.mutate({ scenarioId: selectedScenario, itemId });
     });
     
-    Promise.all(promises)
-      .then(() => {
-        setItemSelectionOpen(false);
-        toast.success('Itens do cenário atualizados');
-      })
-      .catch((error) => {
-        console.error('Error updating scenario items:', error);
-        toast.error('Erro ao atualizar itens do cenário');
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    setItemSelectionOpen(false);
+    toast.success('Itens do cenário atualizados');
   };
   
   const toggleItemSelection = (itemId: string) => {
@@ -236,50 +172,34 @@ const ScenariosPage = () => {
   };
   
   const handleManageSubitems = (itemId: string) => {
-    setSelectedItem(itemId);
+    // if (!subitems[itemId]) return;
     
-    // Fetch visibility data for this item's subitems
-    if (selectedScenario) {
-      getSubitemVisibility(selectedScenario, itemId)
-        .then(visibilityData => {
-          setSubitemVisibility(visibilityData || {});
-          setVisibilityDialogOpen(true);
-        })
-        .catch(error => {
-          console.error('Error fetching subitem visibility:', error);
-          setVisibilityDialogOpen(true); // Open dialog anyway with default values
-        });
-    } else {
-      setVisibilityDialogOpen(true);
-    }
+    // Initialize visibility state
+    // const initialVisibility: Record<string, boolean> = {};
+    // subitems[itemId].forEach(subitem => {
+    //   initialVisibility[subitem.id] = !subitem.hidden;
+    // });
+    
+    // setSubitemVisibility(initialVisibility);
+    setSelectedItem(itemId);
+    setVisibilityDialogOpen(true);
   };
   
   const handleSaveSubitemVisibility = () => {
     if (!selectedItem || !selectedScenario) return;
-    setIsLoading(true);
     
-    // For each subitem, update its visibility in the backend
-    const promises = Object.entries(subitemVisibility).map(([subitemId, isVisible]) => 
-      updateVisibilityMutation.mutateAsync({
-        scenarioId: selectedScenario,
-        itemId: selectedItem,
-        subitemId,
-        isVisible
-      })
-    );
+    // const updatedSubitems = subitems[selectedItem].map(subitem => ({
+    //   ...subitem,
+    //   hidden: !subitemVisibility[subitem.id],
+    // }));
     
-    Promise.all(promises)
-      .then(() => {
-        setVisibilityDialogOpen(false);
-        toast.success('Visibilidade dos subitens atualizada');
-      })
-      .catch((error) => {
-        console.error('Error updating subitem visibility:', error);
-        toast.error('Erro ao atualizar visibilidade dos subitens');
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    // setSubitems({
+    //   ...subitems,
+    //   [selectedItem]: updatedSubitems,
+    // });
+    
+    setVisibilityDialogOpen(false);
+    toast.success('Visibilidade dos subitens atualizada');
   };
   
   const handleSelectSubitem = (subitem: Subitem) => {
@@ -299,10 +219,10 @@ const ScenariosPage = () => {
                 variant="outline"
                 size="sm"
                 onClick={handleAddScenario}
-                disabled={isLoading || createScenarioMutation.isPending}
+                disabled={createScenarioMutation.isPending}
               >
                 <Plus size={16} className="mr-1" />
-                {isLoading ? 'Adicionando...' : 'Adicionar'}
+                Adicionar
               </Button>
             )}
           </div>
@@ -336,7 +256,6 @@ const ScenariosPage = () => {
                   variant="outline"
                   className="mt-4"
                   onClick={handleAddScenario}
-                  disabled={isLoading}
                 >
                   <Plus size={16} className="mr-1" />
                   Adicionar Cenário
@@ -362,7 +281,6 @@ const ScenariosPage = () => {
                   size="sm"
                   onClick={handleOpenAddItems}
                   className="flex items-center gap-1"
-                  disabled={isLoading}
                 >
                   <Plus size={16} />
                   Gerenciar Itens
@@ -370,18 +288,14 @@ const ScenariosPage = () => {
               )}
             </div>
             
-            {isLoadingItems ? (
-              <div className="p-8 text-center">
-                <p className="text-muted-foreground">Carregando itens do cenário...</p>
-              </div>
-            ) : scenarioItems && scenarioItems.length > 0 ? (
+            {scenarioItems && scenarioItems.length > 0 ? (
               <Carousel itemsPerView={3} spacing={16}>
                 {scenarioItems.map((item) => (
                   <ItemCard
                     key={item.item_id}
                     id={item.item_id}
-                    title={item.title || item.item_id}
-                    subitems={itemSubitems[item.item_id] || []}
+                    title={item.item_id}
+                    // subitems={subitems[item.item_id] || []}
                     selected={selectedItem === item.item_id}
                     onClick={() => handleItemSelect(item.item_id)}
                     onAddSubitem={() => handleManageSubitems(item.item_id)}
@@ -399,7 +313,6 @@ const ScenariosPage = () => {
                     variant="outline" 
                     className="mt-4"
                     onClick={handleOpenAddItems}
-                    disabled={isLoading}
                   >
                     <Plus size={16} className="mr-1" />
                     Adicionar Itens
@@ -423,27 +336,24 @@ const ScenariosPage = () => {
               {allProducts.map((product) => (
                 <div key={product.id}>
                   <h3 className="text-md font-semibold mb-2">{product.title}</h3>
-                  {product.items && product.items.length > 0 ? (
-                    product.items.map((item: ProductItem) => (
-                      <div key={item.id} className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50">
-                        <Checkbox 
-                          id={item.id} 
-                          checked={selectedProductItems.includes(item.id)}
-                          onCheckedChange={() => toggleItemSelection(item.id)}
-                        />
-                        <label 
-                          htmlFor={item.id} 
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                        >
-                          {item.title}
-                        </label>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-sm text-muted-foreground italic p-2">
-                      Nenhum item disponível neste produto
+                  {product.items && product.items.map((item) => (
+                    <div key={item.id} className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50">
+                      <Checkbox 
+                        id={item.id} 
+                        checked={selectedProductItems.includes(item.id)}
+                        onCheckedChange={() => toggleItemSelection(item.id)}
+                      />
+                      <label 
+                        htmlFor={item.id} 
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                      >
+                        {item.title}
+                        {/* <span className="ml-2 text-xs text-muted-foreground">
+                          (Produto {item.productId.replace('p', '')})
+                        </span> */}
+                      </label>
                     </div>
-                  )}
+                  ))}
                 </div>
               ))}
             </div>
@@ -454,16 +364,11 @@ const ScenariosPage = () => {
               type="button"
               variant="outline"
               onClick={() => setItemSelectionOpen(false)}
-              disabled={isLoading}
             >
               Cancelar
             </Button>
-            <Button 
-              type="button" 
-              onClick={handleSaveSelectedItems}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Salvando...' : 'Salvar'}
+            <Button type="button" onClick={handleSaveSelectedItems}>
+              Salvar
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -477,13 +382,13 @@ const ScenariosPage = () => {
           </DialogHeader>
           
           <div className="py-4 max-h-[50vh] overflow-y-auto">
-            {selectedItem && itemSubitems[selectedItem] && itemSubitems[selectedItem].length > 0 ? (
+            {/* {selectedItem && subitems[selectedItem] && subitems[selectedItem].length > 0 ? (
               <div className="space-y-4">
-                {itemSubitems[selectedItem].map((subitem) => (
+                {subitems[selectedItem].map((subitem) => (
                   <div key={subitem.id} className="flex items-center space-x-2 p-2 rounded hover:bg-muted/50">
                     <Checkbox 
                       id={`visibility-${subitem.id}`} 
-                      checked={subitemVisibility[subitem.id] ?? !subitem.hidden}
+                      checked={subitemVisibility[subitem.id] || false}
                       onCheckedChange={(checked) => 
                         setSubitemVisibility({
                           ...subitemVisibility,
@@ -504,7 +409,7 @@ const ScenariosPage = () => {
               <div className="text-center py-4 text-muted-foreground">
                 Nenhum subitem disponível para este item.
               </div>
-            )}
+            )} */}
           </div>
           
           <DialogFooter className="flex sm:justify-between">
@@ -512,16 +417,11 @@ const ScenariosPage = () => {
               type="button"
               variant="outline"
               onClick={() => setVisibilityDialogOpen(false)}
-              disabled={isLoading}
             >
               Cancelar
             </Button>
-            <Button 
-              type="button" 
-              onClick={handleSaveSubitemVisibility}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Salvando...' : 'Salvar'}
+            <Button type="button" onClick={handleSaveSubitemVisibility}>
+              Salvar
             </Button>
           </DialogFooter>
         </DialogContent>

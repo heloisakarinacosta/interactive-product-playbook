@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 
 // Determine API URL based on environment
@@ -57,162 +56,63 @@ api.interceptors.response.use(
 
 // Products API
 export const fetchProducts = async () => {
-  try {
-    const response = await api.get('/products');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    throw error;
-  }
+  const response = await api.get('/products');
+  return response.data;
 };
 
 export const createProduct = async (productData: { title: string; description: string }) => {
-  try {
-    const response = await api.post('/products', productData);
-    return response.data;
-  } catch (error) {
-    console.error('Error creating product:', error);
-    throw error;
-  }
+  const response = await api.post('/products', productData);
+  return response.data;
 };
 
 export const updateProduct = async (id: string, productData: { title: string; description: string }) => {
-  try {
-    const response = await api.put(`/products/${id}`, productData);
-    return response.data;
-  } catch (error) {
-    console.error('Error updating product:', error);
-    throw error;
-  }
+  const response = await api.put(`/products/${id}`, productData);
+  return response.data;
 };
 
 // Items API
 export const fetchItems = async (productId: string) => {
-  try {
-    const response = await api.get(`/items/${productId}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching items for product ${productId}:`, error);
-    throw error;
-  }
+  const response = await api.get(`/items/${productId}`);
+  return response.data;
 };
 
 export const createItem = async (productId: string, itemData: { title: string }) => {
-  try {
-    console.log('Creating item for product:', productId, itemData);
-    const response = await api.post(`/items`, { ...itemData, product_id: productId });
-    return response.data;
-  } catch (error) {
-    console.error(`Error creating item for product ${productId}:`, error);
-    throw error;
-  }
+  console.log('Creating item for product:', productId, itemData);
+  const response = await api.post(`/items`, { ...itemData, product_id: productId });
+  return response.data;
 };
 
 export const updateItem = async (id: string, itemData: { title: string }) => {
-  try {
-    console.log(`Updating item ${id} with data:`, itemData);
-    const response = await api.put(`/items/${id}`, itemData);
-    return response.data;
-  } catch (error) {
-    console.error(`Error updating item ${id}:`, error);
-    throw error;
-  }
-};
-
-// Subitems API
-export const fetchSubitems = async (itemId: string) => {
-  try {
-    const response = await api.get(`/subitems/${itemId}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching subitems for item ${itemId}:`, error);
-    return []; // Return empty array instead of throwing
-  }
-};
-
-export const createSubitem = async (itemId: string, subitemData: { 
-  title: string; 
-  subtitle?: string;
-  description: string;
-  lastUpdatedBy?: string;
-}) => {
-  try {
-    console.log(`Creating subitem for item ${itemId}:`, subitemData);
-    const response = await api.post(`/subitems`, { 
-      ...subitemData, 
-      item_id: itemId,
-      last_updated_by: subitemData.lastUpdatedBy || 'system',
-    });
-    return response.data;
-  } catch (error) {
-    console.error(`Error creating subitem for item ${itemId}:`, error);
-    throw error;
-  }
-};
-
-export const updateSubitem = async (id: string, subitemData: { 
-  title: string; 
-  subtitle?: string;
-  description: string;
-  lastUpdatedBy?: string;
-}) => {
-  try {
-    const response = await api.put(`/subitems/${id}`, {
-      ...subitemData,
-      last_updated_by: subitemData.lastUpdatedBy || 'system',
-    });
-    return response.data;
-  } catch (error) {
-    console.error(`Error updating subitem ${id}:`, error);
-    throw error;
-  }
+  console.log(`Updating item ${id} with data:`, itemData);
+  const response = await api.put(`/items/${id}`, itemData);
+  return response.data;
 };
 
 // Scenario Items API
 export const fetchScenarioItems = async (scenarioId: string) => {
-  try {
-    const response = await api.get(`/scenario-items/${scenarioId}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching items for scenario ${scenarioId}:`, error);
-    return []; // Return empty array instead of throwing
-  }
+  const response = await api.get(`/scenario-items/${scenarioId}`);
+  return response.data;
 };
 
 export const linkItemToScenario = async (scenarioId: string, itemId: string) => {
-  try {
-    const response = await api.post(`/scenario-items`, {
-      scenario_id: scenarioId,
-      item_id: itemId,
-      created_by: 'admin', // This should come from the auth context
-      created_at: new Date().toISOString(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error(`Error linking item ${itemId} to scenario ${scenarioId}:`, error);
-    throw error;
-  }
+  const response = await api.post(`/scenario-items`, {
+    scenario_id: scenarioId,
+    item_id: itemId,
+    created_by: 'admin', // This should come from the auth context
+    created_at: new Date().toISOString(),
+  });
+  return response.data;
 };
 
 export const unlinkItemFromScenario = async (scenarioId: string, itemId: string) => {
-  try {
-    const response = await api.delete(`/scenario-items/${scenarioId}/${itemId}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error unlinking item ${itemId} from scenario ${scenarioId}:`, error);
-    throw error;
-  }
+  const response = await api.delete(`/scenario-items/${scenarioId}/${itemId}`);
+  return response.data;
 };
 
 // Scenarios API
 export const fetchScenarios = async () => {
-  try {
-    const response = await api.get('/scenarios');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching scenarios:', error);
-    return []; // Return empty array instead of throwing
-  }
+  const response = await api.get('/scenarios');
+  return response.data;
 };
 
 export const createScenario = async (scenarioData: { 
@@ -220,14 +120,8 @@ export const createScenario = async (scenarioData: {
   description: string;
   formattedDescription?: string;
 }) => {
-  try {
-    console.log('Creating scenario:', scenarioData);
-    const response = await api.post('/scenarios', scenarioData);
-    return response.data;
-  } catch (error) {
-    console.error('Error creating scenario:', error);
-    throw error;
-  }
+  const response = await api.post('/scenarios', scenarioData);
+  return response.data;
 };
 
 export const updateScenario = async (id: string, scenarioData: {
@@ -235,13 +129,8 @@ export const updateScenario = async (id: string, scenarioData: {
   description: string;
   formattedDescription?: string;
 }) => {
-  try {
-    const response = await api.put(`/scenarios/${id}`, scenarioData);
-    return response.data;
-  } catch (error) {
-    console.error(`Error updating scenario ${id}:`, error);
-    throw error;
-  }
+  const response = await api.put(`/scenarios/${id}`, scenarioData);
+  return response.data;
 };
 
 // Subitem visibility for scenarios
@@ -251,25 +140,48 @@ export const updateSubitemVisibility = async (
   subitemId: string,
   isVisible: boolean
 ) => {
-  try {
-    const response = await api.put(`/scenario-subitems/${scenarioId}/${itemId}/${subitemId}/visibility`, {
-      is_visible: isVisible,
-    });
-    return response.data;
-  } catch (error) {
-    console.error(`Error updating visibility for subitem ${subitemId}:`, error);
-    throw error;
-  }
+  const response = await api.put(`/scenario-subitems/${scenarioId}/${itemId}/${subitemId}/visibility`, {
+    is_visible: isVisible,
+  });
+  return response.data;
 };
 
 export const getSubitemVisibility = async (scenarioId: string, itemId: string) => {
-  try {
-    const response = await api.get(`/scenario-subitems/${scenarioId}/${itemId}/visibility`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error getting visibility for scenario ${scenarioId}, item ${itemId}:`, error);
-    return {};
-  }
+  const response = await api.get(`/scenario-subitems/${scenarioId}/${itemId}/visibility`);
+  return response.data;
+};
+
+// Subitems API
+export const fetchSubitems = async (itemId: string) => {
+  const response = await api.get(`/subitems/${itemId}`);
+  return response.data;
+};
+
+export const createSubitem = async (itemId: string, subitemData: { 
+  title: string; 
+  subtitle?: string;
+  description: string;
+  lastUpdatedBy?: string;
+}) => {
+  const response = await api.post(`/subitems`, { 
+    ...subitemData, 
+    item_id: itemId,
+    last_updated_by: subitemData.lastUpdatedBy,
+  });
+  return response.data;
+};
+
+export const updateSubitem = async (id: string, subitemData: { 
+  title: string; 
+  subtitle?: string;
+  description: string;
+  lastUpdatedBy?: string;
+}) => {
+  const response = await api.put(`/subitems/${id}`, {
+    ...subitemData,
+    last_updated_by: subitemData.lastUpdatedBy,
+  });
+  return response.data;
 };
 
 export default api;

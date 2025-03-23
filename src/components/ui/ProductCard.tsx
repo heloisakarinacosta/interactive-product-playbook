@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Pencil, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -108,8 +107,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 ref={editorRef}
                 contentEditable
                 className="w-full min-h-[100px] p-3 border rounded-md focus:outline-none focus:ring-1 focus:ring-primary overflow-y-auto"
-                onPaste={(e: React.ClipboardEvent<HTMLDivElement>) => handlePaste(e.nativeEvent)}
-                onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => handleKeyDown(e.nativeEvent)}
+                onPaste={handlePaste}
+                onKeyDown={handleKeyDown}
               />
             ) : (
               <textarea

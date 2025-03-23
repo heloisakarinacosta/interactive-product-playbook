@@ -13,7 +13,6 @@ export interface Subitem {
   description: string;
   lastUpdatedBy?: string;
   lastUpdatedAt?: string;
-  item_id?: string;
   hidden?: boolean;
 }
 
@@ -64,8 +63,8 @@ const ItemCard: React.FC<ItemCardProps> = ({
         setIsSaving(true);
         console.log(`Saving item ${id} with title: ${editedTitle}`);
         await onUpdate(id, editedTitle);
-        setEditing(false);
         toast.success('Item atualizado com sucesso!');
+        setEditing(false);
       } catch (error) {
         console.error('Error saving item:', error);
         toast.error('Erro ao atualizar item. Tente novamente.');
@@ -125,14 +124,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
               type="text"
               value={editedTitle}
               onChange={(e) => setEditedTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSave(e as unknown as React.MouseEvent);
-                } else if (e.key === 'Escape') {
-                  setEditing(false);
-                  setEditedTitle(title); // Reset to original
-                }
-              }}
+              onKeyDown={handleInputKeyDown}
               className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="Título"
               autoFocus
@@ -187,12 +179,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
               </Button>
             )}
             
-            <Button variant="outline" size="sm" onClick={(e) => {
-              e.stopPropagation();
-              if (onAddSubitem) {
-                onAddSubitem(id);
-              }
-            }}>
+            <Button variant="outline" size="sm" onClick={handleAddSubitem}>
               <Plus size={14} className="mr-1" /> Adicionar
             </Button>
           </>
