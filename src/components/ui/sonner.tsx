@@ -1,5 +1,4 @@
 
-import React from "react";
 import { useTheme } from "next-themes"
 import { Toaster as Sonner } from "sonner"
 
@@ -11,7 +10,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
-      className="toaster group"
+      className="toaster group z-50" // Added z-50 to ensure it's above other elements
+      position="top-center" // Changed to top-center for better visibility
+      closeButton
+      richColors
+      expand
+      duration={4000} // Slightly longer default duration
       toastOptions={{
         classNames: {
           toast:
