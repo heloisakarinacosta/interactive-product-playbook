@@ -1,16 +1,24 @@
+
 import express from 'express';
+import { json, urlencoded } from 'express';
 import cors from 'cors';
-import { cspMiddleware } from '../middleware/csp';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { query, initDatabase } from '../utils/dbUtils';
+import { ResultSetHeader } from 'mysql2';
 
+// Get directory name in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Initialize express app
 const app = express();
-
-// Apply CSP middleware before other middleware
-app.use(cspMiddleware);
+const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(json());
+app.use(urlencoded({ extended: true }));
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '../../public')));
@@ -171,4 +179,3 @@ app.put('/api/subitems/:id', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
