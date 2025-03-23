@@ -11,6 +11,7 @@ Uma plataforma interativa para gerenciar e visualizar produtos, itens, subitens 
 ## Configuração do Banco de Dados
 
 1. Instale o MariaDB em seu servidor.
+
 2. Configure os parâmetros de conexão no arquivo `src/config/db.config.ts`:
    - host (padrão: localhost)
    - user (padrão: root)
@@ -18,9 +19,39 @@ Uma plataforma interativa para gerenciar e visualizar produtos, itens, subitens 
    - database (padrão: playbook_produtos)
    - port (padrão: 3306)
 
-3. Execute o script de inicialização do banco de dados:
+3. Teste a conexão com o banco de dados:
    ```
-   npx ts-node src/scripts/setupDatabase.ts
+   npx tsx src/scripts/testDbConnection.ts
+   ```
+
+4. Se o teste for bem-sucedido, execute o script de inicialização do banco de dados:
+   ```
+   npx tsx src/scripts/setupDatabase.ts
+   ```
+
+### Soluções para Problemas de Conexão
+
+Se você estiver enfrentando problemas de conexão com o MariaDB:
+
+1. Verifique se o servidor MariaDB está em execução:
+   ```
+   sudo systemctl status mariadb   # Linux
+   ```
+   ou
+   ```
+   sc query mysql                  # Windows
+   ```
+
+2. Verifique se o usuário tem permissões corretas:
+   ```sql
+   GRANT ALL PRIVILEGES ON playbook_produtos.* TO 'root'@'localhost';
+   FLUSH PRIVILEGES;
+   ```
+
+3. Para MariaDB 11.4+, pode ser necessário alterar o método de autenticação:
+   ```sql
+   ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'sua_senha';
+   FLUSH PRIVILEGES;
    ```
 
 ## Acesso ao Sistema

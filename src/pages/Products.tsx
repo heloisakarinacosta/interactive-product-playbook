@@ -1,62 +1,25 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import Carousel from '@/components/ui/carousel';
 import ProductCard from '@/components/ui/ProductCard';
 import ItemCard, { Subitem } from '@/components/ui/ItemCard';
 import DetailModal from '@/components/ui/DetailModal';
 import { Button } from '@/components/ui/button';
-
-// Mock data - in a real app, this would come from an API
-const initialProducts = [
-  { id: 'p1', title: 'Produto 1', description: 'Descrição do produto 1' },
-  { id: 'p2', title: 'Produto 2', description: 'Descrição do produto 2' },
-  { id: 'p3', title: 'Produto 3', description: 'Descrição do produto 3' },
-  { id: 'p4', title: 'Produto 4', description: 'Descrição do produto 4' },
-  { id: 'p5', title: 'Produto 5', description: 'Descrição do produto 5' },
-];
-
-const initialItems = {
-  p1: [
-    { id: 'i1', title: 'Item 1 do Produto 1', subitems: [] },
-    { id: 'i2', title: 'Item 2 do Produto 1', subitems: [] },
-    { id: 'i3', title: 'Item 3 do Produto 1', subitems: [] },
-  ],
-  p2: [
-    { id: 'i4', title: 'Item 1 do Produto 2', subitems: [] },
-    { id: 'i5', title: 'Item 2 do Produto 2', subitems: [] },
-  ],
-};
-
-const initialSubitems = {
-  i1: [
-    { 
-      id: 's1', 
-      title: 'Subitem 1.1', 
-      subtitle: 'Informações detalhadas',
-      description: 'Descrição detalhada do subitem 1.1', 
-      lastUpdatedBy: 'admin',
-      lastUpdatedAt: '2023-06-15T10:30:00Z'
-    },
-    { 
-      id: 's2', 
-      title: 'Subitem 1.2', 
-      description: 'Descrição detalhada do subitem 1.2', 
-      lastUpdatedBy: 'admin',
-      lastUpdatedAt: '2023-06-16T14:20:00Z'
-    },
-  ],
-  i2: [
-    { 
-      id: 's3', 
-      title: 'Subitem 2.1', 
-      description: 'Descrição detalhada do subitem 2.1', 
-      lastUpdatedBy: 'admin',
-      lastUpdatedAt: '2023-06-17T09:45:00Z'
-    },
-  ],
-};
+import { 
+  fetchProducts, 
+  createProduct, 
+  updateProduct,
+  fetchItems,
+  createItem,
+  updateItem,
+  fetchSubitems,
+  createSubitem,
+  updateSubitem
+} from '@/services/api';
 
 // Define a proper type for items
 type Item = {
@@ -67,13 +30,140 @@ type Item = {
 
 const ProductsPage = () => {
   const { user } = useAuth();
-  const [products, setProducts] = useState(initialProducts);
+  const queryClient = useQueryClient();
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
-  const [items, setItems] = useState<Record<string, Item[]>>(initialItems as Record<string, Item[]>);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
-  const [subitems, setSubitems] = useState<Record<string, Subitem[]>>(initialSubitems);
   const [selectedSubitem, setSelectedSubitem] = useState<Subitem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Fetch products
+  const { 
+    data: products = [], 
+    isLoading: isLoadingProducts 
+  } = useQuery({
+    queryKey: ['products'],
+    queryFn: fetchProducts,
+  });
+  
+  // Fetch items for selected product
+  const { 
+    data: items = [], 
+    isLoading: isLoadingItems 
+  } = useQuery({
+    queryKey: ['items', selectedProduct],
+    queryFn: () => fetchItems(selectedProduct || ''),
+    enabled: !!selectedProduct,
+  });
+  
+  // Fetch subitems for selected item
+  const { 
+    data: subitems = [], 
+    isLoading: isLoadingSubitems 
+  } = useQuery({
+    queryKey: ['subitems', selectedItem],
+    queryFn: () => fetchSubitems(selectedItem || ''),
+    enabled: !!selectedItem,
+  });
+  
+  // Mutations
+  const createProductMutation = useMutation({
+    mutationFn: createProduct,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Novo produto adicionado');
+    },
+    onError: (error) => {
+      console.error('Error creating product:', error);
+      toast.error('Erro ao adicionar produto');
+    },
+  });
+  
+  const updateProductMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { title: string; description: string } }) => 
+      updateProduct(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Produto atualizado com sucesso');
+    },
+    onError: (error) => {
+      console.error('Error updating product:', error);
+      toast.error('Erro ao atualizar produto');
+    },
+  });
+  
+  const createItemMutation = useMutation({
+    mutationFn: ({ productId, data }: { productId: string; data: { title: string } }) => 
+      createItem(productId, data),
+    onSuccess: () => {
+      if (selectedProduct) {
+        queryClient.invalidateQueries({ queryKey: ['items', selectedProduct] });
+      }
+      toast.success('Novo item adicionado');
+    },
+    onError: (error) => {
+      console.error('Error creating item:', error);
+      toast.error('Erro ao adicionar item');
+    },
+  });
+  
+  const updateItemMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { title: string } }) => 
+      updateItem(id, data),
+    onSuccess: () => {
+      if (selectedProduct) {
+        queryClient.invalidateQueries({ queryKey: ['items', selectedProduct] });
+      }
+      toast.success('Item atualizado com sucesso');
+    },
+    onError: (error) => {
+      console.error('Error updating item:', error);
+      toast.error('Erro ao atualizar item');
+    },
+  });
+  
+  const createSubitemMutation = useMutation({
+    mutationFn: ({ itemId, data }: { 
+      itemId: string; 
+      data: { 
+        title: string; 
+        subtitle?: string;
+        description: string;
+        lastUpdatedBy?: string;
+      } 
+    }) => createSubitem(itemId, data),
+    onSuccess: () => {
+      if (selectedItem) {
+        queryClient.invalidateQueries({ queryKey: ['subitems', selectedItem] });
+      }
+      toast.success('Novo subitem adicionado');
+    },
+    onError: (error) => {
+      console.error('Error creating subitem:', error);
+      toast.error('Erro ao adicionar subitem');
+    },
+  });
+  
+  const updateSubitemMutation = useMutation({
+    mutationFn: ({ id, data }: { 
+      id: string; 
+      data: { 
+        title: string; 
+        subtitle?: string;
+        description: string;
+        lastUpdatedBy?: string;
+      } 
+    }) => updateSubitem(id, data),
+    onSuccess: () => {
+      if (selectedItem) {
+        queryClient.invalidateQueries({ queryKey: ['subitems', selectedItem] });
+      }
+      toast.success('Subitem atualizado com sucesso');
+    },
+    onError: (error) => {
+      console.error('Error updating subitem:', error);
+      toast.error('Erro ao atualizar subitem');
+    },
+  });
   
   // Handle product selection
   const handleProductSelect = (productId: string) => {
@@ -88,79 +178,52 @@ const ProductsPage = () => {
   
   // Handle adding a new product
   const handleAddProduct = () => {
-    const newProductId = `p${Date.now()}`;
-    const newProduct = {
-      id: newProductId,
+    createProductMutation.mutate({
       title: 'Novo Produto',
       description: 'Descrição do novo produto',
-    };
-    setProducts([...products, newProduct]);
-    setSelectedProduct(newProductId);
-    toast.success('Novo produto adicionado');
+    });
   };
   
   // Handle updating a product
   const handleUpdateProduct = (id: string, title: string, description: string) => {
-    setProducts(products.map(product => 
-      product.id === id 
-        ? { ...product, title, description } 
-        : product
-    ));
+    updateProductMutation.mutate({
+      id,
+      data: { title, description },
+    });
   };
   
   // Handle adding a new item
   const handleAddItem = () => {
     if (!selectedProduct) return;
     
-    const newItemId = `i${Date.now()}`;
-    const newItem = {
-      id: newItemId,
-      title: 'Novo Item',
-      subitems: [],
-    };
-    
-    setItems({
-      ...items,
-      [selectedProduct]: [...(items[selectedProduct] || []), newItem],
+    createItemMutation.mutate({
+      productId: selectedProduct,
+      data: { title: 'Novo Item' },
     });
-    setSelectedItem(newItemId);
-    toast.success('Novo item adicionado');
   };
   
   // Handle updating an item
   const handleUpdateItem = (id: string, title: string) => {
-    if (!selectedProduct) return;
-    
-    setItems({
-      ...items,
-      [selectedProduct]: items[selectedProduct].map(item => 
-        item.id === id 
-          ? { ...item, title } 
-          : item
-      ),
+    updateItemMutation.mutate({
+      id,
+      data: { title },
     });
   };
   
   // Handle adding a new subitem
   const handleAddSubitem = (itemId: string) => {
-    const newSubitemId = `s${Date.now()}`;
-    const newSubitem: Subitem = {
-      id: newSubitemId,
+    const newSubitem = {
       title: 'Novo Subitem',
       description: 'Descrição do novo subitem',
       lastUpdatedBy: user?.email || 'system',
-      lastUpdatedAt: new Date().toISOString(),
     };
     
-    setSubitems({
-      ...subitems,
-      [itemId]: [...(subitems[itemId] || []), newSubitem],
+    createSubitemMutation.mutate({
+      itemId,
+      data: newSubitem,
     });
     
-    // Immediately open the modal for editing
-    setSelectedSubitem(newSubitem);
-    setIsModalOpen(true);
-    toast.success('Novo subitem adicionado');
+    // We'll open the modal for editing when the query is refetched
   };
   
   // Handle selecting a subitem
@@ -171,17 +234,31 @@ const ProductsPage = () => {
   
   // Handle updating a subitem
   const handleUpdateSubitem = (updatedSubitem: Subitem) => {
-    if (!selectedItem) return;
-    
-    setSubitems({
-      ...subitems,
-      [selectedItem]: (subitems[selectedItem] || []).map(item => 
-        item.id === updatedSubitem.id 
-          ? updatedSubitem
-          : item
-      ),
+    updateSubitemMutation.mutate({
+      id: updatedSubitem.id,
+      data: {
+        title: updatedSubitem.title,
+        subtitle: updatedSubitem.subtitle,
+        description: updatedSubitem.description,
+        lastUpdatedBy: updatedSubitem.lastUpdatedBy,
+      },
     });
   };
+  
+  // When subitems are loaded, update the items with their subitems
+  useEffect(() => {
+    if (selectedItem && subitems.length > 0) {
+      const itemWithSubitems = items.find(item => item.id === selectedItem);
+      if (itemWithSubitems) {
+        // When a new subitem is created, select it
+        const newSubitem = subitems.find(s => !s.lastUpdatedAt);
+        if (newSubitem && !isModalOpen) {
+          setSelectedSubitem(newSubitem);
+          setIsModalOpen(true);
+        }
+      }
+    }
+  }, [selectedItem, subitems, items, isModalOpen]);
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 pt-16">
@@ -197,6 +274,7 @@ const ProductsPage = () => {
                 size="sm"
                 onClick={handleAddProduct}
                 className="flex items-center gap-1"
+                disabled={createProductMutation.isPending}
               >
                 <Plus size={16} />
                 Adicionar
@@ -204,19 +282,41 @@ const ProductsPage = () => {
             )}
           </div>
           
-          <Carousel itemsPerView={4} spacing={16}>
-            {products.map((product) => (
-              <ProductCard
-                key={product.id}
-                id={product.id}
-                title={product.title}
-                description={product.description}
-                selected={selectedProduct === product.id}
-                onClick={() => handleProductSelect(product.id)}
-                onUpdate={handleUpdateProduct}
-              />
-            ))}
-          </Carousel>
+          {isLoadingProducts ? (
+            <div className="p-8 text-center">
+              <p className="text-muted-foreground">Carregando produtos...</p>
+            </div>
+          ) : products.length > 0 ? (
+            <Carousel itemsPerView={4} spacing={16}>
+              {products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  id={product.id}
+                  title={product.title}
+                  description={product.description}
+                  selected={selectedProduct === product.id}
+                  onClick={() => handleProductSelect(product.id)}
+                  onUpdate={handleUpdateProduct}
+                />
+              ))}
+            </Carousel>
+          ) : (
+            <div className="bg-muted/30 rounded-lg p-8 text-center">
+              <p className="text-muted-foreground">
+                Nenhum produto cadastrado.
+              </p>
+              {user?.isAdmin && (
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={handleAddProduct}
+                >
+                  <Plus size={16} className="mr-1" />
+                  Adicionar Produto
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </section>
       
@@ -235,6 +335,7 @@ const ProductsPage = () => {
                   size="sm"
                   onClick={handleAddItem}
                   className="flex items-center gap-1"
+                  disabled={createItemMutation.isPending}
                 >
                   <Plus size={16} />
                   Adicionar
@@ -242,14 +343,18 @@ const ProductsPage = () => {
               )}
             </div>
             
-            {items[selectedProduct] && items[selectedProduct].length > 0 ? (
+            {isLoadingItems ? (
+              <div className="p-8 text-center">
+                <p className="text-muted-foreground">Carregando itens...</p>
+              </div>
+            ) : items.length > 0 ? (
               <Carousel itemsPerView={3} spacing={16}>
-                {items[selectedProduct].map((item) => (
+                {items.map((item) => (
                   <ItemCard
                     key={item.id}
                     id={item.id}
                     title={item.title}
-                    subitems={subitems[item.id] || []}
+                    subitems={subitems.filter(s => s.item_id === item.id)}
                     selected={selectedItem === item.id}
                     onClick={() => handleItemSelect(item.id)}
                     onUpdate={handleUpdateItem}
