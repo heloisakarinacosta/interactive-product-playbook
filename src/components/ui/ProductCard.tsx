@@ -4,7 +4,6 @@ import { Pencil, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { useRichEditor } from '@/hooks/useRichEditor';
 import { toast } from 'sonner';
 
 export interface ProductCardProps {
@@ -15,7 +14,6 @@ export interface ProductCardProps {
   onClick?: () => void;
   onUpdate?: (id: string, title: string, description: string) => void;
   className?: string;
-  isScenario?: boolean;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -26,51 +24,24 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onClick,
   onUpdate,
   className,
-  isScenario = false,
 }) => {
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(title);
   const [editedDescription, setEditedDescription] = useState(description);
   
-  const {
-    editorRef,
-    formatText,
-    insertImage,
-    insertLink,
-    handlePaste,
-    handleKeyDown
-  } = useRichEditor({
-    initialContent: description,
-    onChange: (content) => setEditedDescription(content)
-  });
-
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     setEditing(true);
   };
   
-  const handleSave = async (e: React.MouseEvent) => {
+  const handleSave = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!editedTitle.trim()) {
-      toast.error('O título não pode estar vazio');
-      return;
-    }
-
     if (onUpdate) {
-      try {
-        await onUpdate(
-          id,
-          editedTitle,
-          isScenario ? editorRef.current?.innerHTML || '' : editedDescription
-        );
-        setEditing(false);
-        toast.success('Informações salvas com sucesso!');
-      } catch (error) {
-        console.error('Error saving:', error);
-        toast.error('Erro ao salvar. Tente novamente.');
-      }
+      onUpdate(id, editedTitle, editedDescription);
+      toast.success('Informações salvas com sucesso!');
     }
+    setEditing(false);
   };
   
   return (
@@ -95,6 +66,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       {/* Card content */}
       <div className="flex-1">
         {editing ? (
+          // Edit mode
           <div onClick={(e) => e.stopPropagation()}>
             <input
               type="text"
@@ -103,51 +75,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
               className="w-full mb-2 px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="Título"
             />
-            {isScenario ? (
-              <div
-                ref={editorRef}
-                contentEditable
-                className="w-full min-h-[100px] p-3 border rounded-md focus:outline-none focus:ring-1 focus:ring-primary overflow-y-auto"
-                onPaste={(e: React.ClipboardEvent<HTMLDivElement>) => handlePaste(e.nativeEvent)}
-                onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => handleKeyDown(e.nativeEvent)}
-              />
-            ) : (
-              <textarea
-                value={editedDescription}
-                onChange={(e) => setEditedDescription(e.target.value)}
-                className="w-full h-24 px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
-                placeholder="Descrição"
-              />
-            )}
-            {isScenario && (
-              <div className="flex gap-2 mt-2">
-                <Button size="sm" variant="outline" onClick={() => formatText('bold')}>
-                  B
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => formatText('italic')}>
-                  I
-                </Button>
-                <Button size="sm" variant="outline" onClick={insertLink}>
-                  Link
-                </Button>
-                <Button size="sm" variant="outline" onClick={insertImage}>
-                  Imagem
-                </Button>
-              </div>
-            )}
+            <textarea
+              value={editedDescription}
+              onChange={(e) => setEditedDescription(e.target.value)}
+              className="w-full h-24 px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder="Descrição"
+            />
           </div>
         ) : (
+          // View mode
           <>
             <h3 className="font-medium text-base mb-2 line-clamp-1">{title}</h3>
-            {isScenario ? (
-              <div 
-                className="text-sm text-muted-foreground line-clamp-4"
-                dangerouslySetInnerHTML={{ __html: description }}
-              />
-            ) : (
-              description && (
-                <p className="text-sm text-muted-foreground line-clamp-4">{description}</p>
-              )
+            {description && (
+              <p className="text-sm text-muted-foreground line-clamp-4">{description}</p>
             )}
           </>
         )}

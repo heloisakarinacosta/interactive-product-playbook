@@ -1,162 +1,92 @@
-import mysql from 'mysql2/promise';
-import { dbConfig } from '../config/db.config';
 
-// Create connection pool com configurações mais seguras para MariaDB 11.4
+import mysql from 'mysql2/promise';
+import { dbConfig, dbSetupScript } from '../config/db.config';
+import fs from 'fs';
+import path from 'path';
+
+// Create a connection pool
 const pool = mysql.createPool({
   host: dbConfig.host,
   user: dbConfig.user,
   password: dbConfig.password,
   database: dbConfig.database,
-  port: dbConfig.port,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 });
 
-// Initialize database - create tables if they don't exist
-export const initDatabase = async () => {
+// Function to execute a query
+export const query = async (sql: string, params?: any[]) => {
   try {
-    console.log('Tentando inicializar o banco de dados...');
-    // Teste de conexão antes de prosseguir
-    const connection = await pool.getConnection();
-    console.log('Conexão bem-sucedida!');
-    connection.release();
-
-    // Connect to database
-    await query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        username VARCHAR(255) NOT NULL UNIQUE,
-        password VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      );
-    `);
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS access_logs (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      );
-    `);
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS products (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        description TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      );
-    `);
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS items (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        product_id INT NOT NULL,
-        title VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-      );
-    `);
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS subitems (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        item_id INT NOT NULL,
-        title VARCHAR(255) NOT NULL,
-        subtitle VARCHAR(255),
-        description TEXT,
-        last_updated_by VARCHAR(255),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
-      );
-    `);
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS scenarios (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        description TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      );
-    `);
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS scenario_items (
-        scenario_id INT NOT NULL,
-        item_id INT NOT NULL,
-        PRIMARY KEY (scenario_id, item_id),
-        FOREIGN KEY (scenario_id) REFERENCES scenarios(id) ON DELETE CASCADE,
-        FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
-      );
-    `);
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS scenario_subitems (
-        scenario_id INT NOT NULL,
-        subitem_id INT NOT NULL,
-        visible BOOLEAN DEFAULT TRUE,
-        PRIMARY KEY (scenario_id, subitem_id),
-        FOREIGN KEY (scenario_id) REFERENCES scenarios(id) ON DELETE CASCADE,
-        FOREIGN KEY (subitem_id) REFERENCES subitems(id) ON DELETE CASCADE
-      );
-    `);
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS menus (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        label VARCHAR(255) NOT NULL,
-        route VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      );
-    `);
-
-    console.log('✅ Tabelas criadas com sucesso!');
+    const [results] = await pool.execute(sql, params);
+    return results;
   } catch (error) {
-    console.error('Error initializing database:', error);
+    console.error('Database query error:', error);
     throw error;
   }
 };
 
-// Método separado para testar apenas a conexão
-export const testConnection = async () => {
+// Function to save description to a text file
+export const saveDescriptionToFile = async (
+  subitemId: number,
+  title: string,
+  description: string
+): Promise<string> => {
   try {
-    console.log('Testando conexão com o banco de dados...');
-    console.log('Configuração:', {
-      host: dbConfig.host,
-      user: dbConfig.user,
-      database: dbConfig.database,
-      port: dbConfig.port
-    });
-    const connection = await pool.getConnection();
-    console.log('✅ Conexão bem-sucedida!');
+    // Create directory if it doesn't exist
+    const dir = path.join(process.cwd(), 'public', 'descriptions');
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    // Create a sanitized filename
+    const sanitizedTitle = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
     
-    // Obter informações do servidor
-    const [rows] = await connection.query('SELECT VERSION() as version');
-    console.log('Versão do banco de dados:', rows);
+    // Create a unique filename
+    const filename = `${subitemId}-${sanitizedTitle}.txt`;
+    const filepath = path.join(dir, filename);
+
+    // Strip HTML tags to save as plain text
+    const plainText = description.replace(/<[^>]*>/g, '');
     
-    connection.release();
-    return true;
+    // Write the file
+    fs.writeFileSync(filepath, plainText);
+    
+    return filename;
   } catch (error) {
-    console.error('❌ Erro ao conectar com o banco de dados:', error);
-    return false;
+    console.error('Error saving description to file:', error);
+    throw error;
   }
 };
 
-// Query helper function
-export const query = async (sql: string, params?: any[]) => {
+// Initialize database (create tables if they don't exist)
+export const initDatabase = async () => {
   try {
-    const [rows] = await pool.query(sql, params);
-    return rows;
+    // Create connection without specifying database to check if it exists
+    const tempConnection = await mysql.createConnection({
+      host: dbConfig.host,
+      user: dbConfig.user,
+      password: dbConfig.password,
+    });
+
+    // Execute the setup script
+    const scripts = dbSetupScript.split(';');
+    
+    for (const script of scripts) {
+      if (script.trim()) {
+        await tempConnection.execute(script + ';');
+      }
+    }
+    
+    await tempConnection.end();
+    
+    console.log('Database initialized successfully');
+    return true;
   } catch (error) {
-    console.error('Error executing query:', error);
+    console.error('Database initialization error:', error);
     throw error;
   }
 };

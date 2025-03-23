@@ -48,14 +48,13 @@ const DetailModal: React.FC<DetailModalProps> = ({
   
   const handleSave = () => {
     if (onUpdate && editorRef.current) {
-      const now = new Date().toISOString();
       onUpdate({
         ...subitem,
         title: editedTitle,
         subtitle: editedSubtitle,
         description: editorRef.current.innerHTML,
         lastUpdatedBy: user?.email || 'system',
-        lastUpdatedAt: now,
+        lastUpdatedAt: new Date().toISOString(),
       });
       toast.success('Conteúdo atualizado com sucesso!');
     }

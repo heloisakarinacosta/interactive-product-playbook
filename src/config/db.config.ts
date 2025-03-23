@@ -1,3 +1,4 @@
+
 // Database connection configuration for MariaDB
 export const dbConfig = {
   host: 'localhost',
