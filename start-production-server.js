@@ -17,6 +17,22 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Add Content Security Policy headers
+app.use((req, res, next) => {
+  // Set Content-Security-Policy header
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'"
+  );
+  
+  // Add other security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  
+  next();
+});
+
 console.log('Iniciando o servidor em modo de produção...');
 
 // Testar a conexão com o banco de dados antes de iniciar o servidor

@@ -1,3 +1,4 @@
+
 import express from 'express';
 import { json, urlencoded } from 'express';
 import cors from 'cors';
@@ -11,6 +12,22 @@ const router = express.Router();
 router.use(cors());
 router.use(json());
 router.use(urlencoded({ extended: true }));
+
+// Add CSP middleware
+router.use((req, res, next) => {
+  // Set Content-Security-Policy header
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'"
+  );
+  
+  // Add other security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  
+  next();
+});
 
 // API routes
 
