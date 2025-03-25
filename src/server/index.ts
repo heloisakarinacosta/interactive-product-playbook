@@ -1,41 +1,21 @@
-
 import express from 'express';
 import { json, urlencoded } from 'express';
 import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { query, initDatabase } from '../utils/dbUtils';
 import { ResultSetHeader } from 'mysql2';
 
-// Get directory name in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Initialize express app
-const app = express();
-const PORT = process.env.PORT || 3001;
+// Create router instead of app
+const router = express.Router();
 
 // Middleware
-app.use(cors());
-app.use(json());
-app.use(urlencoded({ extended: true }));
-
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, '../../public')));
-
-// Initialize database
-initDatabase()
-  .then(() => {
-    console.log('Database initialized successfully');
-  })
-  .catch((error) => {
-    console.error('Failed to initialize database:', error);
-  });
+router.use(cors());
+router.use(json());
+router.use(urlencoded({ extended: true }));
 
 // API routes
 
 // Products routes
-app.get('/api/products', async (req, res) => {
+router.get('/products', async (req, res) => {
   try {
     const products = await query('SELECT * FROM products ORDER BY updated_at DESC');
     res.json(products);
@@ -45,7 +25,7 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-app.post('/api/products', async (req, res) => {
+router.post('/products', async (req, res) => {
   try {
     const { title, description } = req.body;
     const result = await query(
@@ -67,7 +47,7 @@ app.post('/api/products', async (req, res) => {
 });
 
 // Update product
-app.put('/api/products/:id', async (req, res) => {
+router.put('/products/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description } = req.body;
@@ -86,7 +66,7 @@ app.put('/api/products/:id', async (req, res) => {
 });
 
 // Items routes
-app.get('/api/items/:productId', async (req, res) => {
+router.get('/items/:productId', async (req, res) => {
   try {
     const { productId } = req.params;
     const items = await query(
@@ -100,7 +80,7 @@ app.get('/api/items/:productId', async (req, res) => {
   }
 });
 
-app.post('/api/items', async (req, res) => {
+router.post('/items', async (req, res) => {
   try {
     const { title, product_id } = req.body;
     const result = await query(
@@ -122,7 +102,7 @@ app.post('/api/items', async (req, res) => {
 });
 
 // Subitems routes
-app.get('/api/subitems/:itemId', async (req, res) => {
+router.get('/subitems/:itemId', async (req, res) => {
   try {
     const { itemId } = req.params;
     const subitems = await query(
@@ -136,7 +116,7 @@ app.get('/api/subitems/:itemId', async (req, res) => {
   }
 });
 
-app.post('/api/subitems', async (req, res) => {
+router.post('/subitems', async (req, res) => {
   try {
     const { item_id, title, subtitle, description, last_updated_by } = req.body;
     const result = await query(
@@ -157,7 +137,7 @@ app.post('/api/subitems', async (req, res) => {
   }
 });
 
-app.put('/api/subitems/:id', async (req, res) => {
+router.put('/subitems/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { title, subtitle, description, last_updated_by } = req.body;
@@ -175,7 +155,27 @@ app.put('/api/subitems/:id', async (req, res) => {
   }
 });
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Export the router for production use
+export default router;
+
+// If this file is run directly (development mode), create an Express app and use the router
+if (require.main === module) {
+  const app = express();
+  const PORT = process.env.PORT || 3001;
+  
+  // Initialize database
+  initDatabase()
+    .then(() => {
+      console.log('Database initialized successfully');
+    })
+    .catch((error) => {
+      console.error('Failed to initialize database:', error);
+    });
+  
+  app.use('/api', router);
+  
+  // Start the server
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}

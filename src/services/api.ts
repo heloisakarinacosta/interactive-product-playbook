@@ -1,7 +1,9 @@
-
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001/api';
+// Determine a URL da API com base no ambiente
+const API_URL = import.meta.env.PROD 
+  ? '/api' // Em produção, usamos caminho relativo
+  : 'http://localhost:3001/api'; // Em desenvolvimento, usamos URL completa
 
 // Create axios instance
 const api = axios.create({
@@ -13,8 +15,13 @@ const api = axios.create({
 
 // Products API
 export const fetchProducts = async () => {
-  const response = await api.get('/products');
-  return response.data;
+  try {
+    const response = await api.get('/products');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    throw error;
+  }
 };
 
 export const createProduct = async (productData: { title: string; description: string }) => {
@@ -29,8 +36,13 @@ export const updateProduct = async (id: string, productData: { title: string; de
 
 // Items API
 export const fetchItems = async (productId: string) => {
-  const response = await api.get(`/items/${productId}`);
-  return response.data;
+  try {
+    const response = await api.get(`/items/${productId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching items:', error);
+    throw error;
+  }
 };
 
 export const createItem = async (productId: string, itemData: { title: string }) => {
@@ -45,8 +57,13 @@ export const updateItem = async (id: string, itemData: { title: string }) => {
 
 // Subitems API
 export const fetchSubitems = async (itemId: string) => {
-  const response = await api.get(`/subitems/${itemId}`);
-  return response.data;
+  try {
+    const response = await api.get(`/subitems/${itemId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching subitems:', error);
+    throw error;
+  }
 };
 
 export const createSubitem = async (itemId: string, subitemData: { 
