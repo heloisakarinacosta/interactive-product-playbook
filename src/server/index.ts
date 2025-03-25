@@ -8,6 +8,20 @@ import { ResultSetHeader } from 'mysql2';
 // Create router instead of app
 const router = express.Router();
 
+// Coloque o middleware CSP PRIMEIRO, antes de outros middlewares
+app.use((req, res, next) => {
+  // Remove qualquer CSP existente para evitar conflitos
+  res.removeHeader('Content-Security-Policy');
+  
+  // Define o novo CSP
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; connect-src 'self' http://191.232.33.131:3000 http://localhost:3000 https://my.productfruits.com https://edge.microsoft.com; img-src 'self' https://my.productfruits.com data:; script-src 'self' https://cdn.gpteng.co 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;"
+  );
+  
+  next();
+});
+
 // Middleware
 router.use(cors());
 router.use(json());
@@ -190,6 +204,17 @@ if (require.main === module) {
     });
   
   app.use('/api', router);
+
+  // Serve index.html para qualquer rota não encontrada (necessário para SPA)
+  app.get('*', (req, res) => {
+    // Define o CSP antes de enviar o arquivo
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; connect-src 'self' http://191.232.33.131:3000 http://localhost:3000 https://my.productfruits.com https://edge.microsoft.com; img-src 'self' https://my.productfruits.com data:; script-src 'self' https://cdn.gpteng.co 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;"
+    );
+    res.sendFile(path.join(__dirname, '../../dist/index.html'));
+  });
+
   
   // Start the server
   app.listen(PORT, () => {
