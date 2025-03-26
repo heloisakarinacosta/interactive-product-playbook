@@ -1,4 +1,3 @@
-
 import express from 'express';
 import { json, urlencoded } from 'express';
 import cors from 'cors';
@@ -197,8 +196,13 @@ if (process.env.NODE_ENV === 'production') {
     }
   }));
   
-  // Handle SPA routing - serve index.html for any unmatched routes
+  // Updated: Handle SPA routing - serve index.html for any unmatched routes with CSP headers
   app.get('*', (req, res) => {
+    // Define CSP before sending the file
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; connect-src 'self' http://191.232.33.131:3000 http://localhost:3000 https://my.productfruits.com https://edge.microsoft.com; img-src 'self' https://my.productfruits.com data:; script-src 'self' https://cdn.gpteng.co 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;"
+    );
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
