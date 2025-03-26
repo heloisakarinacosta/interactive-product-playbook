@@ -1,7 +1,9 @@
 
 import express from 'express';
 import cors from 'cors';
-import { ResultSetHeader } from 'mysql2';
+// Fix for the mysql2 ResultSetHeader import
+import pkg from 'mysql2';
+const { ResultSetHeader } = pkg;
 import path from 'path';
 import { fileURLToPath } from 'url';
 import mysql from 'mysql2/promise';
@@ -81,9 +83,8 @@ router.post('/products', async (req, res) => {
       [title, description]
     );
     
-    // Access insertId from the result
-    const resultHeader = result;
-    const newProductId = resultHeader.insertId;
+    // Fixed: No need for explicit ResultSetHeader type casting in JS
+    const newProductId = result.insertId;
     
     const newProduct = await query('SELECT * FROM products WHERE id = ?', [newProductId]);
     
@@ -136,8 +137,8 @@ router.post('/items', async (req, res) => {
       [product_id, title]
     );
     
-    const resultHeader = result;
-    const newItemId = resultHeader.insertId;
+    // Fixed: No need for explicit ResultSetHeader type casting in JS
+    const newItemId = result.insertId;
     
     const newItem = await query('SELECT * FROM items WHERE id = ?', [newItemId]);
     
@@ -171,8 +172,8 @@ router.post('/subitems', async (req, res) => {
       [item_id, title, subtitle, description, last_updated_by]
     );
     
-    const resultHeader = result;
-    const newSubitemId = resultHeader.insertId;
+    // Fixed: No need for explicit ResultSetHeader type casting in JS
+    const newSubitemId = result.insertId;
     
     const newSubitem = await query('SELECT * FROM subitems WHERE id = ?', [newSubitemId]);
     
