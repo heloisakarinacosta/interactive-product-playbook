@@ -1,4 +1,3 @@
-
 import express from 'express';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -151,45 +150,86 @@ const query = async (sql, params) => {
   }
 };
 
-// Define CSP directives for our app
+// Define CSP directives for our app - expanded for productfruits
 const cspDirectives = {
   defaultSrc: ["'self'"],
-  scriptSrc: ["'self'", "https://cdn.gpteng.co", "'unsafe-inline'", "'unsafe-eval'"],
-  connectSrc: ["'self'", "http://191.232.33.131:3000", "http://localhost:3000", "https://my.productfruits.com", "https://edge.microsoft.com", "wss://my.productfruits.com"],
+  scriptSrc: ["'self'", "https://cdn.gpteng.co", "'unsafe-inline'", "'unsafe-eval'", "https://my.productfruits.com"],
+  connectSrc: [
+    "'self'", 
+    "http://191.232.33.131:3000", 
+    "http://localhost:3000", 
+    "https://my.productfruits.com",
+    "wss://my.productfruits.com",
+    "https://edge.microsoft.com"
+  ],
   imgSrc: ["'self'", "https://my.productfruits.com", "data:"],
-  styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-  fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-  frameSrc: ["'self'", "https://my.productfruits.com"]
+  styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://my.productfruits.com"],
+  fontSrc: ["'self'", "data:", "https://fonts.gstatic.com", "https://my.productfruits.com"],
+  frameSrc: ["'self'", "https://my.productfruits.com"],
+  objectSrc: ["'self'"],
+  mediaSrc: ["'self'"]
 };
 
-// Import app from server/index.js (which we need to create)
-// Note that we will modify the imported app to add a middleware that ensures
-// our CSP directives are not overridden by other middleware
+// Monkey patch the http.ServerResponse prototype to intercept all setHeader calls globally
+// This ensures our CSP is never overridden by any middleware
+const http = require('http');
+const originalSetHeader = http.ServerResponse.prototype.setHeader;
+
+http.ServerResponse.prototype.setHeader = function(name, value) {
+  // Only intercept Content-Security-Policy headers
+  if (name.toLowerCase() === 'content-security-policy') {
+    if (typeof value === 'string' && value.includes("default-src 'none'")) {
+      // Replace any restrictive CSP with our custom one
+      const cspString = Object.entries(cspDirectives)
+        .map(([key, values]) => {
+          const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+          return `${kebabKey} ${values.join(' ')}`;
+        })
+        .join('; ');
+      
+      return originalSetHeader.call(this, name, cspString);
+    }
+  }
+  
+  return originalSetHeader.call(this, name, value);
+};
+
+// Import app from server/index.js
 import app from './src/server/index.js';
 
 // Custom middleware to ensure our CSP is preserved on all responses
 app.use((req, res, next) => {
-  // Capture the original send method
-  const originalSend = res.send;
+  // Force our CSP to be set on every response
+  const cspString = Object.entries(cspDirectives)
+    .map(([key, values]) => {
+      const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+      return `${kebabKey} ${values.join(' ')}`;
+    })
+    .join('; ');
   
-  // Override the send method
+  res.setHeader('Content-Security-Policy', cspString);
+  
+  // Override the setHeader method for this request
+  const originalResSetHeader = res.setHeader;
+  res.setHeader = function(name, value) {
+    if (name.toLowerCase() === 'content-security-policy') {
+      if (typeof value === 'string' && value.includes("default-src 'none'")) {
+        return originalResSetHeader.call(this, name, cspString);
+      }
+    }
+    return originalResSetHeader.call(this, name, value);
+  };
+  
+  // Monkey patch res.send for this request
+  const originalSend = res.send;
   res.send = function(body) {
-    // Build our CSP string
-    const cspString = Object.entries(cspDirectives)
-      .map(([key, values]) => {
-        // Convert camelCase to kebab-case (e.g., defaultSrc to default-src)
-        const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-        return `${kebabKey} ${values.join(' ')}`;
-      })
-      .join('; ');
-    
-    // Ensure we set the header if it's not already set or contains restrictive default-src
-    const currentCsp = res.getHeader('Content-Security-Policy');
-    if (!currentCsp || (typeof currentCsp === 'string' && currentCsp.includes("default-src 'none'"))) {
+    // Ensure our CSP is set before sending
+    if (!res.getHeader('Content-Security-Policy') || 
+        (typeof res.getHeader('Content-Security-Policy') === 'string' && 
+         res.getHeader('Content-Security-Policy').includes("default-src 'none'"))) {
       res.setHeader('Content-Security-Policy', cspString);
     }
     
-    // Call the original send method
     return originalSend.call(this, body);
   };
   
