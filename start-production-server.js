@@ -151,8 +151,50 @@ const query = async (sql, params) => {
   }
 };
 
+// Define CSP directives for our app
+const cspDirectives = {
+  defaultSrc: ["'self'"],
+  scriptSrc: ["'self'", "https://cdn.gpteng.co", "'unsafe-inline'", "'unsafe-eval'"],
+  connectSrc: ["'self'", "http://191.232.33.131:3000", "http://localhost:3000", "https://my.productfruits.com", "https://edge.microsoft.com", "wss://my.productfruits.com"],
+  imgSrc: ["'self'", "https://my.productfruits.com", "data:"],
+  styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+  fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+  frameSrc: ["'self'", "https://my.productfruits.com"]
+};
+
 // Import app from server/index.js (which we need to create)
+// Note that we will modify the imported app to add a middleware that ensures
+// our CSP directives are not overridden by other middleware
 import app from './src/server/index.js';
+
+// Custom middleware to ensure our CSP is preserved on all responses
+app.use((req, res, next) => {
+  // Capture the original send method
+  const originalSend = res.send;
+  
+  // Override the send method
+  res.send = function(body) {
+    // Build our CSP string
+    const cspString = Object.entries(cspDirectives)
+      .map(([key, values]) => {
+        // Convert camelCase to kebab-case (e.g., defaultSrc to default-src)
+        const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+        return `${kebabKey} ${values.join(' ')}`;
+      })
+      .join('; ');
+    
+    // Ensure we set the header if it's not already set or contains restrictive default-src
+    const currentCsp = res.getHeader('Content-Security-Policy');
+    if (!currentCsp || (typeof currentCsp === 'string' && currentCsp.includes("default-src 'none'"))) {
+      res.setHeader('Content-Security-Policy', cspString);
+    }
+    
+    // Call the original send method
+    return originalSend.call(this, body);
+  };
+  
+  next();
+});
 
 // Initialize database before starting the server
 initDatabase()

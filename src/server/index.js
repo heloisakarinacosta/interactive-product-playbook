@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import mysql from 'mysql2/promise';
 import { dbConfig } from '../config/db.config.js';
 import helmet from 'helmet';
+import serveStatic from 'serve-static';
 
 // Create pool for database connections
 const pool = mysql.createPool({
@@ -35,45 +36,62 @@ const query = async (sql, params) => {
 // Create Express application
 const app = express();
 
-// Create router for API endpoints
-const router = express.Router();
+// Define our CSP directives
+const cspDirectives = {
+  defaultSrc: ["'self'"],
+  scriptSrc: ["'self'", "https://cdn.gpteng.co", "'unsafe-inline'", "'unsafe-eval'"],
+  connectSrc: ["'self'", "http://191.232.33.131:3000", "http://localhost:3000", "https://my.productfruits.com", "https://edge.microsoft.com", "wss://my.productfruits.com"],
+  imgSrc: ["'self'", "https://my.productfruits.com", "data:"],
+  styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+  fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+  frameSrc: ["'self'", "https://my.productfruits.com"]
+};
 
-// Apply Helmet before any route handling
-// Use Helmet with custom CSP configuration
+// Apply Helmet with custom CSP configuration
 app.use(
   helmet({
     contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "https://cdn.gpteng.co", "'unsafe-inline'", "'unsafe-eval'"],
-        connectSrc: ["'self'", "http://191.232.33.131:3000", "http://localhost:3000", "https://my.productfruits.com", "https://edge.microsoft.com", "wss://my.productfruits.com"],
-        imgSrc: ["'self'", "https://my.productfruits.com", "data:"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-        frameSrc: ["'self'", "https://my.productfruits.com"]
-      }
+      directives: cspDirectives
     },
-    // Use boolean values instead of objects for simplicity
     xContentTypeOptions: true,
-    xFrameOptions: false, // Alterando para false para permitir iframe de productfruits
+    xFrameOptions: false, // Allowing iframe for productfruits
     xXssProtection: true
   })
 );
 
-// Middleware to ensure no other middleware overrides our CSP
+// Custom middleware to ensure our CSP is preserved
 app.use((req, res, next) => {
+  // Store the original setHeader function
   const originalSetHeader = res.setHeader;
   
+  // Override setHeader function
   res.setHeader = function(name, value) {
-    // Don't let any other middleware set a different Content-Security-Policy
+    // Preserve our CSP and don't let any other middleware override it
     if (name.toLowerCase() === 'content-security-policy') {
-      return this;
+      // Convert our CSP directives to a string for comparison
+      const cspString = Object.entries(cspDirectives)
+        .map(([key, values]) => {
+          // Convert camelCase to kebab-case (e.g., defaultSrc to default-src)
+          const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+          return `${kebabKey} ${values.join(' ')}`;
+        })
+        .join('; ');
+      
+      // If the value being set includes "default-src 'none'", use our CSP instead
+      if (typeof value === 'string' && value.includes("default-src 'none'")) {
+        return originalSetHeader.call(this, name, cspString);
+      }
     }
+    
+    // Call the original setHeader for all other headers
     return originalSetHeader.call(this, name, value);
   };
   
   next();
 });
+
+// Create router for API endpoints
+const router = express.Router();
 
 // Middleware for router
 router.use(cors());
@@ -225,7 +243,36 @@ if (process.env.NODE_ENV === 'production') {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const distPath = path.join(__dirname, '../../../dist');
   
-  // Serve static files with consistent CSP
+  // Custom middleware to preserve CSP when serving static files
+  const serveStaticWithCsp = (req, res, next) => {
+    const originalSend = res.send;
+    
+    // Ensure CSP is applied before sending the response
+    res.send = function(body) {
+      // Set our custom CSP header before sending
+      const cspString = Object.entries(cspDirectives)
+        .map(([key, values]) => {
+          const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+          return `${kebabKey} ${values.join(' ')}`;
+        })
+        .join('; ');
+      
+      // Ensure we set the header if it's not already set or contains restrictive default-src
+      const currentCsp = res.getHeader('Content-Security-Policy');
+      if (!currentCsp || (typeof currentCsp === 'string' && currentCsp.includes("default-src 'none'"))) {
+        res.setHeader('Content-Security-Policy', cspString);
+      }
+      
+      return originalSend.call(this, body);
+    };
+    
+    next();
+  };
+  
+  // Apply our middleware before serving static files
+  app.use(serveStaticWithCsp);
+  
+  // Serve static files
   app.use(express.static(distPath));
   
   // Handle SPA routing - serve index.html for any unmatched routes
