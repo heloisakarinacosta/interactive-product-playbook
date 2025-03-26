@@ -1,3 +1,4 @@
+
 import express from 'express';
 import { json, urlencoded } from 'express';
 import cors from 'cors';
@@ -37,6 +38,7 @@ const originalSetHeader = http.ServerResponse.prototype.setHeader;
 http.ServerResponse.prototype.setHeader = function(name, value) {
   // Only intercept Content-Security-Policy headers
   if (name.toLowerCase() === 'content-security-policy') {
+    // Fix for TypeScript error - check if value is a string before using includes
     if (typeof value === 'string' && value.includes("default-src 'none'")) {
       // Replace any restrictive CSP with our custom one
       const cspString = Object.entries(cspDirectives)
@@ -81,6 +83,7 @@ app.use((req, res, next) => {
   const originalResSetHeader = res.setHeader;
   res.setHeader = function(name, value) {
     if (name.toLowerCase() === 'content-security-policy') {
+      // Fix for TypeScript error - check if value is a string before using includes
       if (typeof value === 'string' && value.includes("default-src 'none'")) {
         return originalResSetHeader.call(this, name, cspString);
       }
@@ -92,9 +95,10 @@ app.use((req, res, next) => {
   const originalSend = res.send;
   res.send = function(body) {
     // Ensure our CSP is set
-    if (!res.getHeader('Content-Security-Policy') || 
-        (typeof res.getHeader('Content-Security-Policy') === 'string' && 
-         res.getHeader('Content-Security-Policy').includes("default-src 'none'"))) {
+    const currentCsp = res.getHeader('Content-Security-Policy');
+    // Fix for TypeScript error - check if currentCsp is a string before using includes
+    if (!currentCsp || 
+        (typeof currentCsp === 'string' && currentCsp.includes("default-src 'none'"))) {
       res.setHeader('Content-Security-Policy', cspString);
     }
     return originalSend.call(this, body);
