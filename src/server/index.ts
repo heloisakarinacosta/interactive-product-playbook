@@ -4,6 +4,7 @@ import cors from 'cors';
 import { query, initDatabase } from '../utils/dbUtils';
 import { ResultSetHeader } from 'mysql2';
 import path from 'path';
+import helmet from 'helmet';
 
 // Create Express application
 const app = express();
@@ -11,24 +12,25 @@ const app = express();
 // Create router for API endpoints
 const router = express.Router();
 
-// Define Content Security Policy middleware - apply first before other middleware
-app.use((req, res, next) => {
-  // Remove any existing CSP to avoid conflicts
-  res.removeHeader('Content-Security-Policy');
-  
-  // Define comprehensive CSP that allows necessary resources
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'self'; connect-src 'self' http://191.232.33.131:3000 http://localhost:3000 https://my.productfruits.com https://edge.microsoft.com; img-src 'self' https://my.productfruits.com data:; script-src 'self' https://cdn.gpteng.co 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;"
-  );
-  
-  // Add other security headers
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  
-  next();
-});
+// Use Helmet for managing security headers
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        connectSrc: ["'self'", "http://191.232.33.131:3000", "http://localhost:3000", "https://my.productfruits.com", "https://edge.microsoft.com"],
+        imgSrc: ["'self'", "https://my.productfruits.com", "data:"],
+        scriptSrc: ["'self'", "https://cdn.gpteng.co", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"]
+      }
+    },
+    // Other security headers
+    xContentTypeOptions: { noSniff: true },
+    xFrameOptions: { action: 'deny' },
+    xXssProtection: { enabled: true, mode: 'block' }
+  })
+);
 
 // Middleware for router
 router.use(cors());
@@ -185,24 +187,11 @@ app.use('/api', router);
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../../dist');
   
-  // Updated: Add CSP headers when serving static files
-  app.use(express.static(distPath, {
-    setHeaders: (res) => {
-      // Ensure CSP is correctly set for static files
-      res.setHeader(
-        'Content-Security-Policy',
-        "default-src 'self'; connect-src 'self' http://191.232.33.131:3000 http://localhost:3000 https://my.productfruits.com https://edge.microsoft.com; img-src 'self' https://my.productfruits.com data:; script-src 'self' https://cdn.gpteng.co 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;"
-      );
-    }
-  }));
+  // Use express.static with consistent CSP headers through Helmet
+  app.use(express.static(distPath));
   
-  // Updated: Handle SPA routing - serve index.html for any unmatched routes with CSP headers
+  // Handle SPA routing - serve index.html for any unmatched routes
   app.get('*', (req, res) => {
-    // Define CSP before sending the file
-    res.setHeader(
-      'Content-Security-Policy',
-      "default-src 'self'; connect-src 'self' http://191.232.33.131:3000 http://localhost:3000 https://my.productfruits.com https://edge.microsoft.com; img-src 'self' https://my.productfruits.com data:; script-src 'self' https://cdn.gpteng.co 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;"
-    );
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }

@@ -1,13 +1,12 @@
-
 import express from 'express';
 import cors from 'cors';
-// Fix for the mysql2 ResultSetHeader import
 import pkg from 'mysql2';
 const { ResultSetHeader } = pkg;
 import path from 'path';
 import { fileURLToPath } from 'url';
 import mysql from 'mysql2/promise';
 import { dbConfig } from '../config/db.config.js';
+import helmet from 'helmet';
 
 // Create pool for database connections
 const pool = mysql.createPool({
@@ -38,24 +37,24 @@ const app = express();
 // Create router for API endpoints
 const router = express.Router();
 
-// Define Content Security Policy middleware - apply first before other middleware
-app.use((req, res, next) => {
-  // Remove any existing CSP to avoid conflicts
-  res.removeHeader('Content-Security-Policy');
-  
-  // Define comprehensive CSP that allows necessary resources
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'self'; connect-src 'self' http://191.232.33.131:3000 http://localhost:3000 https://my.productfruits.com https://edge.microsoft.com; img-src 'self' https://my.productfruits.com data:; script-src 'self' https://cdn.gpteng.co 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;"
-  );
-  
-  // Add other security headers
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  
-  next();
-});
+// Use Helmet for managing security headers
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        connectSrc: ["'self'", "http://191.232.33.131:3000", "http://localhost:3000", "https://my.productfruits.com", "https://edge.microsoft.com"],
+        imgSrc: ["'self'", "https://my.productfruits.com", "data:"],
+        scriptSrc: ["'self'", "https://cdn.gpteng.co", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"]
+      }
+    },
+    xContentTypeOptions: { noSniff: true },
+    xFrameOptions: { action: 'deny' },
+    xXssProtection: { enabled: true, mode: 'block' }
+  })
+);
 
 // Middleware for router
 router.use(cors());
@@ -83,7 +82,6 @@ router.post('/products', async (req, res) => {
       [title, description]
     );
     
-    // Fixed: No need for explicit ResultSetHeader type casting in JS
     const newProductId = result.insertId;
     
     const newProduct = await query('SELECT * FROM products WHERE id = ?', [newProductId]);
@@ -137,7 +135,6 @@ router.post('/items', async (req, res) => {
       [product_id, title]
     );
     
-    // Fixed: No need for explicit ResultSetHeader type casting in JS
     const newItemId = result.insertId;
     
     const newItem = await query('SELECT * FROM items WHERE id = ?', [newItemId]);
@@ -172,7 +169,6 @@ router.post('/subitems', async (req, res) => {
       [item_id, title, subtitle, description, last_updated_by]
     );
     
-    // Fixed: No need for explicit ResultSetHeader type casting in JS
     const newSubitemId = result.insertId;
     
     const newSubitem = await query('SELECT * FROM subitems WHERE id = ?', [newSubitemId]);
