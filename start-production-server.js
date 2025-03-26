@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import mysql from 'mysql2/promise';
 import { dbConfig } from './src/config/db.config.js';
+import helmet from 'helmet';
 
 // Set environment to production
 process.env.NODE_ENV = 'production';

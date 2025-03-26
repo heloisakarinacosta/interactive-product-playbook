@@ -1,3 +1,4 @@
+
 import express from 'express';
 import { json, urlencoded } from 'express';
 import cors from 'cors';
@@ -12,7 +13,8 @@ const app = express();
 // Create router for API endpoints
 const router = express.Router();
 
-// Use Helmet for managing security headers
+// Apply Helmet before any route handling
+// Use Helmet with custom CSP configuration
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -31,6 +33,21 @@ app.use(
     xXssProtection: { enabled: true, mode: 'block' }
   })
 );
+
+// Middleware to ensure no other middleware overrides our CSP
+app.use((req, res, next) => {
+  const originalSetHeader = res.setHeader;
+  
+  res.setHeader = function(name, value) {
+    // Don't let any other middleware set a different Content-Security-Policy
+    if (name.toLowerCase() === 'content-security-policy') {
+      return this;
+    }
+    return originalSetHeader.call(this, name, value);
+  };
+  
+  next();
+});
 
 // Middleware for router
 router.use(cors());
@@ -187,7 +204,7 @@ app.use('/api', router);
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../../dist');
   
-  // Use express.static with consistent CSP headers through Helmet
+  // Serve static files with consistent CSP
   app.use(express.static(distPath));
   
   // Handle SPA routing - serve index.html for any unmatched routes
