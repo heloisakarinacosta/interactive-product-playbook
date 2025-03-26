@@ -1,9 +1,7 @@
 import axios from 'axios';
 
-// Determine a URL da API com base no ambiente
-const API_URL = import.meta.env.PROD 
-  ? '/api' // Em produção, usamos caminho relativo
-  : 'http://localhost:3001/api'; // Em desenvolvimento, usamos URL completa
+// Determine API URL based on environment
+const API_URL = '/api'; // Always use relative path
 
 // Create axios instance
 const api = axios.create({
