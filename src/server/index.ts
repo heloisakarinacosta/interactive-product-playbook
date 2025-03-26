@@ -1,38 +1,25 @@
-
 import express from 'express';
 import { json, urlencoded } from 'express';
 import cors from 'cors';
 import { query, initDatabase } from '../utils/dbUtils';
 import { ResultSetHeader } from 'mysql2';
+import path from 'path';
 
-// Create router instead of app
+// Create Express application
+const app = express();
+
+// Create router for API endpoints
 const router = express.Router();
 
-// Coloque o middleware CSP PRIMEIRO, antes de outros middlewares
+// Define Content Security Policy middleware - apply first before other middleware
 app.use((req, res, next) => {
-  // Remove qualquer CSP existente para evitar conflitos
+  // Remove any existing CSP to avoid conflicts
   res.removeHeader('Content-Security-Policy');
   
-  // Define o novo CSP
+  // Define comprehensive CSP that allows necessary resources
   res.setHeader(
     'Content-Security-Policy',
     "default-src 'self'; connect-src 'self' http://191.232.33.131:3000 http://localhost:3000 https://my.productfruits.com https://edge.microsoft.com; img-src 'self' https://my.productfruits.com data:; script-src 'self' https://cdn.gpteng.co 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;"
-  );
-  
-  next();
-});
-
-// Middleware
-router.use(cors());
-router.use(json());
-router.use(urlencoded({ extended: true }));
-
-// Add CSP middleware
-router.use((req, res, next) => {
-  // Set Content-Security-Policy header
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'"
   );
   
   // Add other security headers
@@ -42,6 +29,11 @@ router.use((req, res, next) => {
   
   next();
 });
+
+// Middleware for router
+router.use(cors());
+router.use(json());
+router.use(urlencoded({ extended: true }));
 
 // API routes
 
@@ -186,38 +178,40 @@ router.put('/subitems/:id', async (req, res) => {
   }
 });
 
-// Export the router for production use
-export default router;
+// Use router for /api routes
+app.use('/api', router);
 
-// If this file is run directly (development mode), create an Express app and use the router
+// If in production, serve static files
+if (process.env.NODE_ENV === 'production') {
+  const distPath = path.join(__dirname, '../../dist');
+  app.use(express.static(distPath));
+  
+  // Handle SPA routing - serve index.html for any unmatched routes
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
+// Initialize database and start server if this file is run directly
 if (require.main === module) {
-  const app = express();
   const PORT = process.env.PORT || 3001;
   
   // Initialize database
   initDatabase()
     .then(() => {
       console.log('Database initialized successfully');
+      
+      // Start the server
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log(`Access at: http://localhost:${PORT}`);
+      });
     })
     .catch((error) => {
       console.error('Failed to initialize database:', error);
+      process.exit(1);
     });
-  
-  app.use('/api', router);
-
-  // Serve index.html para qualquer rota não encontrada (necessário para SPA)
-  app.get('*', (req, res) => {
-    // Define o CSP antes de enviar o arquivo
-    res.setHeader(
-      'Content-Security-Policy',
-      "default-src 'self'; connect-src 'self' http://191.232.33.131:3000 http://localhost:3000 https://my.productfruits.com https://edge.microsoft.com; img-src 'self' https://my.productfruits.com data:; script-src 'self' https://cdn.gpteng.co 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;"
-    );
-    res.sendFile(path.join(__dirname, '../../dist/index.html'));
-  });
-
-  
-  // Start the server
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
 }
+
+// Export the Express app for production use
+export default app;

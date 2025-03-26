@@ -4,64 +4,35 @@ import express from 'express';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { createServer } from 'http';
-import { initDatabase } from './dist/utils/dbUtils.js';
+import { initDatabase } from './src/utils/dbUtils.js';
+import app from './src/server/index.js';
 
-// Obter o diretório atual em ESM
+// Set environment to production
+process.env.NODE_ENV = 'production';
+
+// Get current directory in ESM
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Inicializar o aplicativo Express
-const app = express();
-const PORT = process.env.PORT || 3000;
+console.log('Starting server in production mode...');
 
-// Middleware para parsing de JSON e URL encoded
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Add Content Security Policy headers
-app.use((req, res, next) => {
-  // Set Content-Security-Policy header
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'"
-  );
-  
-  // Add other security headers
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  
-  next();
-});
-
-console.log('Iniciando o servidor em modo de produção...');
-
-// Testar a conexão com o banco de dados antes de iniciar o servidor
-try {
-  await initDatabase();
-  console.log('✅ Banco de dados inicializado com sucesso!');
-} catch (error) {
-  console.error('❌ Falha ao inicializar o banco de dados:', error);
-  process.exit(1);
-}
-
-// Importar as rotas da API
-const apiModule = await import('./dist/server/index.js');
-const apiRoutes = apiModule.default || app;
-
-// Usar as rotas da API
-app.use('/api', apiRoutes);
-
-// Servir arquivos estáticos do build do React
-app.use(express.static(join(__dirname, 'dist/client')));
-
-// Para qualquer outra rota, servir o index.html
-app.get('*', (req, res) => {
-  res.sendFile(join(__dirname, 'dist/client', 'index.html'));
-});
-
-// Iniciar o servidor
-const server = createServer(app);
-server.listen(PORT, () => {
-  console.log(`✅ Servidor rodando na porta ${PORT} em modo de produção`);
-  console.log(`   Acesse: http://localhost:${PORT}`);
-});
+// Initialize database before starting the server
+initDatabase()
+  .then(() => {
+    console.log('✅ Database initialized successfully!');
+    
+    // Define port
+    const PORT = process.env.PORT || 3000;
+    
+    // Create HTTP server with Express app
+    const server = createServer(app);
+    
+    // Start server
+    server.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT} in production mode`);
+      console.log(`   Access: http://localhost:${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error('❌ Failed to initialize database:', error);
+    process.exit(1);
+  });
