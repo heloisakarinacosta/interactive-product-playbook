@@ -1,3 +1,4 @@
+
 import express from 'express';
 import { json, urlencoded } from 'express';
 import cors from 'cors';
@@ -184,7 +185,17 @@ app.use('/api', router);
 // If in production, serve static files
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../../dist');
-  app.use(express.static(distPath));
+  
+  // Updated: Add CSP headers when serving static files
+  app.use(express.static(distPath, {
+    setHeaders: (res) => {
+      // Ensure CSP is correctly set for static files
+      res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'self'; connect-src 'self' http://191.232.33.131:3000 http://localhost:3000 https://my.productfruits.com https://edge.microsoft.com; img-src 'self' https://my.productfruits.com data:; script-src 'self' https://cdn.gpteng.co 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;"
+      );
+    }
+  }));
   
   // Handle SPA routing - serve index.html for any unmatched routes
   app.get('*', (req, res) => {
