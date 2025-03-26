@@ -13,6 +13,17 @@
    node start-production-server.js
    ```
 
+## Configuração de Ambiente
+
+As variáveis de ambiente a seguir podem ser configuradas:
+
+- `DB_HOST`: Host do banco de dados (padrão: 'localhost')
+- `DB_USER`: Usuário do banco de dados (padrão: 'root')
+- `DB_PASSWORD`: Senha do banco de dados
+- `DB_NAME`: Nome do banco de dados (padrão: 'playbook_produtos')
+- `DB_PORT`: Porta do banco de dados (padrão: 3306)
+- `PORT`: Porta da aplicação (padrão: 3000)
+
 ## Deployment em Servidor na Nuvem
 
 ### Opção 1: DigitalOcean Droplet / VPS
@@ -146,10 +157,11 @@
 3. Configure as variáveis de ambiente necessárias
 4. O Railway detectará automaticamente o script `start` no package.json
 
-## Troubleshooting
+## Solução de Problemas
 
-- **Erro de conexão com banco de dados**: Verifique credenciais no arquivo .env
-- **Erro 502 Bad Gateway**: Verifique se o servidor Node está rodando
-- **Problemas de CORS**: Verifique a configuração CORS no arquivo server.js
+- **Erro de conexão com banco de dados**: Verifique credenciais no arquivo .env e certifique-se de que o serviço MariaDB/MySQL está rodando.
+- **Erro 502 Bad Gateway**: Verifique se o servidor Node está rodando e as portas estão corretamente configuradas.
+- **Problemas de CORS**: Verifique a configuração CORS no arquivo server.js.
+- **Módulos não encontrados**: Certifique-se de que todas as dependências estão instaladas (`npm install`).
 
 Para mais ajuda, consulte a documentação completa do projeto ou abra uma issue no repositório.
