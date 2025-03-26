@@ -9,6 +9,7 @@ import mysql from 'mysql2/promise';
 import { dbConfig } from '../config/db.config.js';
 import helmet from 'helmet';
 import expressStaticGzip from 'express-static-gzip';
+import fs from 'fs';
 
 // Create pool for database connections
 const pool = mysql.createPool({
@@ -277,10 +278,30 @@ app.use('/api', router);
 // If in production, serve static files
 if (process.env.NODE_ENV === 'production') {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const distPath = path.join(__dirname, '../../../dist');
+  // Two directories up from server/index.js to reach project root, then to dist
+  const distPath = path.join(__dirname, '../../dist');
+  
+  console.log('Server index.js serving static files from:', distPath);
+  
+  // Check if the dist directory exists
+  if (fs.existsSync(distPath)) {
+    console.log('✅ Dist directory found in server/index.js');
+    
+    // List files in the dist directory for debugging
+    try {
+      const files = fs.readdirSync(distPath);
+      console.log('Files in dist directory (server/index.js):', files);
+    } catch (error) {
+      console.error('Error reading dist directory:', error);
+    }
+  } else {
+    console.error('❌ Dist directory not found at', distPath);
+  }
+  
+  // Set dist path as a static directory with express.static as fallback
+  app.use(express.static(distPath));
   
   // Use express-static-gzip for serving compressed static files
-  // Fix: Remove setHeaders property to match TypeScript interface
   app.use(expressStaticGzip(distPath, {
     enableBrotli: true,
     orderPreference: ['br', 'gz'],
@@ -295,6 +316,7 @@ if (process.env.NODE_ENV === 'production') {
   
   // Handle SPA routing - serve index.html for any unmatched routes
   app.get('*', (req, res) => {
+    console.log('Handling route in server/index.js:', req.path);
     // Set CSP header before sending index.html
     res.setHeader('Content-Security-Policy', generateCspString());
     res.sendFile(path.join(distPath, 'index.html'));

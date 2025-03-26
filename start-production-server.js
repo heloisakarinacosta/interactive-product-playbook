@@ -1,4 +1,3 @@
-
 import express from 'express';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -7,6 +6,7 @@ import mysql from 'mysql2/promise';
 import { dbConfig } from './src/config/db.config.js';
 import helmet from 'helmet';
 import expressStaticGzip from 'express-static-gzip';
+import fs from 'fs';
 
 // Set environment to production
 process.env.NODE_ENV = 'production';
@@ -15,6 +15,7 @@ process.env.NODE_ENV = 'production';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 console.log('Starting server in production mode...');
+console.log('Current directory:', __dirname);
 
 // Create a database connection pool
 const pool = mysql.createPool({
@@ -234,8 +235,33 @@ app.use((req, res, next) => {
   next();
 });
 
-// Use express-static-gzip for static files
+// Define the path to static files
 const distPath = join(__dirname, 'dist');
+console.log('Looking for static files at:', distPath);
+
+// Check if the dist directory exists
+if (fs.existsSync(distPath)) {
+  console.log('✅ Dist directory found');
+  
+  // List files in the dist directory for debugging
+  const files = fs.readdirSync(distPath);
+  console.log('Files in dist directory:', files);
+  
+  // Check if index.html exists
+  if (fs.existsSync(join(distPath, 'index.html'))) {
+    console.log('✅ index.html found');
+  } else {
+    console.error('❌ index.html not found in dist directory');
+  }
+} else {
+  console.error('❌ Dist directory not found at', distPath);
+  console.log('Make sure to run "npm run build" before starting the production server');
+}
+
+// Set dist path as a static directory with express.static as fallback
+app.use(express.static(distPath));
+
+// Use express-static-gzip for static files
 app.use(expressStaticGzip(distPath, {
   enableBrotli: true,
   orderPreference: ['br', 'gz'],
@@ -250,6 +276,7 @@ app.use((req, res, next) => {
 
 // Handle SPA routing
 app.get('*', (req, res) => {
+  console.log('Handling route:', req.path);
   res.setHeader('Content-Security-Policy', generateCspString());
   res.sendFile(join(distPath, 'index.html'));
 });

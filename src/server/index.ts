@@ -8,6 +8,7 @@ import path from 'path';
 import helmet from 'helmet';
 import http from 'http';
 import expressStaticGzip from 'express-static-gzip';
+import fs from 'fs';
 
 // Create Express application
 const app = express();
@@ -261,8 +262,27 @@ app.use('/api', router);
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../../dist');
   
+  console.log('TypeScript server serving static files from:', distPath);
+  
+  // Check if the dist directory exists
+  if (fs.existsSync(distPath)) {
+    console.log('✅ Dist directory found in TypeScript server');
+    
+    // List files in the dist directory for debugging
+    try {
+      const files = fs.readdirSync(distPath);
+      console.log('Files in dist directory (TypeScript server):', files);
+    } catch (error) {
+      console.error('Error reading dist directory:', error);
+    }
+  } else {
+    console.error('❌ Dist directory not found at', distPath);
+  }
+  
+  // Set dist path as a static directory with express.static as fallback
+  app.use(express.static(distPath));
+  
   // Use express-static-gzip for serving compressed static files
-  // Fix: Use correct TypeScript interface for expressStaticGzip options
   app.use(expressStaticGzip(distPath, {
     enableBrotli: true,
     orderPreference: ['br', 'gz'],
@@ -277,6 +297,7 @@ if (process.env.NODE_ENV === 'production') {
   
   // Handle SPA routing - serve index.html for any unmatched routes
   app.get('*', (req, res) => {
+    console.log('Handling route in TypeScript server:', req.path);
     // Set CSP header before sending index.html
     res.setHeader('Content-Security-Policy', generateCspString());
     res.sendFile(path.join(distPath, 'index.html'));
