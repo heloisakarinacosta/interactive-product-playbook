@@ -1,3 +1,4 @@
+
 import express from 'express';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -5,6 +6,7 @@ import { createServer } from 'http';
 import mysql from 'mysql2/promise';
 import { dbConfig } from './src/config/db.config.js';
 import helmet from 'helmet';
+import expressStaticGzip from 'express-static-gzip';
 
 // Set environment to production
 process.env.NODE_ENV = 'production';
@@ -170,6 +172,16 @@ const cspDirectives = {
   mediaSrc: ["'self'"]
 };
 
+// Convert CSP object to string format
+const generateCspString = () => {
+  return Object.entries(cspDirectives)
+    .map(([key, values]) => {
+      const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+      return `${kebabKey} ${values.join(' ')}`;
+    })
+    .join('; ');
+};
+
 // Monkey patch the http.ServerResponse prototype to intercept all setHeader calls globally
 // This ensures our CSP is never overridden by any middleware
 const http = require('http');
@@ -180,14 +192,7 @@ http.ServerResponse.prototype.setHeader = function(name, value) {
   if (name.toLowerCase() === 'content-security-policy') {
     if (typeof value === 'string' && value.includes("default-src 'none'")) {
       // Replace any restrictive CSP with our custom one
-      const cspString = Object.entries(cspDirectives)
-        .map(([key, values]) => {
-          const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-          return `${kebabKey} ${values.join(' ')}`;
-        })
-        .join('; ');
-      
-      return originalSetHeader.call(this, name, cspString);
+      return originalSetHeader.call(this, name, generateCspString());
     }
   }
   
@@ -200,21 +205,14 @@ import app from './src/server/index.js';
 // Custom middleware to ensure our CSP is preserved on all responses
 app.use((req, res, next) => {
   // Force our CSP to be set on every response
-  const cspString = Object.entries(cspDirectives)
-    .map(([key, values]) => {
-      const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-      return `${kebabKey} ${values.join(' ')}`;
-    })
-    .join('; ');
-  
-  res.setHeader('Content-Security-Policy', cspString);
+  res.setHeader('Content-Security-Policy', generateCspString());
   
   // Override the setHeader method for this request
   const originalResSetHeader = res.setHeader;
   res.setHeader = function(name, value) {
     if (name.toLowerCase() === 'content-security-policy') {
       if (typeof value === 'string' && value.includes("default-src 'none'")) {
-        return originalResSetHeader.call(this, name, cspString);
+        return originalResSetHeader.call(this, name, generateCspString());
       }
     }
     return originalResSetHeader.call(this, name, value);
@@ -224,16 +222,34 @@ app.use((req, res, next) => {
   const originalSend = res.send;
   res.send = function(body) {
     // Ensure our CSP is set before sending
-    if (!res.getHeader('Content-Security-Policy') || 
-        (typeof res.getHeader('Content-Security-Policy') === 'string' && 
-         res.getHeader('Content-Security-Policy').includes("default-src 'none'"))) {
-      res.setHeader('Content-Security-Policy', cspString);
+    const currentCsp = res.getHeader('Content-Security-Policy');
+    if (!currentCsp || 
+        (typeof currentCsp === 'string' && currentCsp.includes("default-src 'none'"))) {
+      res.setHeader('Content-Security-Policy', generateCspString());
     }
     
     return originalSend.call(this, body);
   };
   
   next();
+});
+
+// Use express-static-gzip for static files
+const distPath = join(__dirname, 'dist');
+app.use(expressStaticGzip(distPath, {
+  enableBrotli: true,
+  orderPreference: ['br', 'gz'],
+  index: false,
+  setHeaders: (res) => {
+    // Set our custom CSP header
+    res.setHeader('Content-Security-Policy', generateCspString());
+  }
+}));
+
+// Handle SPA routing
+app.get('*', (req, res) => {
+  res.setHeader('Content-Security-Policy', generateCspString());
+  res.sendFile(join(distPath, 'index.html'));
 });
 
 // Initialize database before starting the server

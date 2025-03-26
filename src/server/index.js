@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import mysql from 'mysql2/promise';
 import { dbConfig } from '../config/db.config.js';
 import helmet from 'helmet';
-import serveStatic from 'serve-static';
+import expressStaticGzip from 'express-static-gzip';
 
 // Create pool for database connections
 const pool = mysql.createPool({
@@ -55,6 +55,16 @@ const cspDirectives = {
   mediaSrc: ["'self'"]
 };
 
+// Convert CSP object to string format
+const generateCspString = () => {
+  return Object.entries(cspDirectives)
+    .map(([key, values]) => {
+      const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+      return `${kebabKey} ${values.join(' ')}`;
+    })
+    .join('; ');
+};
+
 // Monkey patch the http.ServerResponse prototype to intercept all setHeader calls
 // This ensures our CSP is never overridden
 const http = require('http');
@@ -65,14 +75,7 @@ http.ServerResponse.prototype.setHeader = function(name, value) {
   if (name.toLowerCase() === 'content-security-policy') {
     if (typeof value === 'string' && value.includes("default-src 'none'")) {
       // Replace any restrictive CSP with our custom one
-      const cspString = Object.entries(cspDirectives)
-        .map(([key, values]) => {
-          const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-          return `${kebabKey} ${values.join(' ')}`;
-        })
-        .join('; ');
-      
-      return originalSetHeader.call(this, name, cspString);
+      return originalSetHeader.call(this, name, generateCspString());
     }
   }
   
@@ -94,21 +97,14 @@ app.use(
 // Remove any other middleware that might override CSP
 app.use((req, res, next) => {
   // Force our CSP to be set
-  const cspString = Object.entries(cspDirectives)
-    .map(([key, values]) => {
-      const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-      return `${kebabKey} ${values.join(' ')}`;
-    })
-    .join('; ');
-  
-  res.setHeader('Content-Security-Policy', cspString);
+  res.setHeader('Content-Security-Policy', generateCspString());
   
   // Monkey patch res.setHeader for this request
   const originalResSetHeader = res.setHeader;
   res.setHeader = function(name, value) {
     if (name.toLowerCase() === 'content-security-policy') {
       if (typeof value === 'string' && value.includes("default-src 'none'")) {
-        return originalResSetHeader.call(this, name, cspString);
+        return originalResSetHeader.call(this, name, generateCspString());
       }
     }
     return originalResSetHeader.call(this, name, value);
@@ -118,10 +114,10 @@ app.use((req, res, next) => {
   const originalSend = res.send;
   res.send = function(body) {
     // Ensure our CSP is set
-    if (!res.getHeader('Content-Security-Policy') || 
-        (typeof res.getHeader('Content-Security-Policy') === 'string' && 
-         res.getHeader('Content-Security-Policy').includes("default-src 'none'"))) {
-      res.setHeader('Content-Security-Policy', cspString);
+    const currentCsp = res.getHeader('Content-Security-Policy');
+    if (!currentCsp || 
+        (typeof currentCsp === 'string' && currentCsp.includes("default-src 'none'"))) {
+      res.setHeader('Content-Security-Policy', generateCspString());
     }
     return originalSend.call(this, body);
   };
@@ -282,56 +278,21 @@ if (process.env.NODE_ENV === 'production') {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const distPath = path.join(__dirname, '../../../dist');
   
-  // Custom middleware to preserve CSP when serving static files
-  const serveStaticWithCsp = (req, res, next) => {
-    // Ensure our CSP header is set
-    const cspString = Object.entries(cspDirectives)
-      .map(([key, values]) => {
-        const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-        return `${kebabKey} ${values.join(' ')}`;
-      })
-      .join('; ');
-    
-    res.setHeader('Content-Security-Policy', cspString);
-    
-    next();
-  };
-  
-  // Apply our middleware before serving static files
-  app.use(serveStaticWithCsp);
-  
-  // Customize serve-static to ensure it doesn't override our CSP
-  const customServeStatic = (path, options) => {
-    const originalMiddleware = serveStatic(path, options);
-    return (req, res, next) => {
-      // Set CSP header before serve-static middleware runs
-      const cspString = Object.entries(cspDirectives)
-        .map(([key, values]) => {
-          const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-          return `${kebabKey} ${values.join(' ')}`;
-        })
-        .join('; ');
-      
-      res.setHeader('Content-Security-Policy', cspString);
-      
-      return originalMiddleware(req, res, next);
-    };
-  };
-  
-  // Use our custom serve-static middleware
-  app.use(customServeStatic(distPath));
+  // Use express-static-gzip instead of regular static middleware
+  app.use(expressStaticGzip(distPath, {
+    enableBrotli: true,
+    orderPreference: ['br', 'gz'],
+    index: false, // Disable default index behavior
+    setHeaders: (res) => {
+      // Set our custom CSP header
+      res.setHeader('Content-Security-Policy', generateCspString());
+    }
+  }));
   
   // Handle SPA routing - serve index.html for any unmatched routes
   app.get('*', (req, res) => {
     // Set CSP header before sending index.html
-    const cspString = Object.entries(cspDirectives)
-      .map(([key, values]) => {
-        const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-        return `${kebabKey} ${values.join(' ')}`;
-      })
-      .join('; ');
-    
-    res.setHeader('Content-Security-Policy', cspString);
+    res.setHeader('Content-Security-Policy', generateCspString());
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }

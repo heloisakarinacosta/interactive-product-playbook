@@ -1,4 +1,3 @@
-
 import express from 'express';
 import { json, urlencoded } from 'express';
 import cors from 'cors';
@@ -7,6 +6,7 @@ import { ResultSetHeader } from 'mysql2';
 import path from 'path';
 import helmet from 'helmet';
 import http from 'http';
+import expressStaticGzip from 'express-static-gzip';
 
 // Create Express application
 const app = express();
@@ -31,6 +31,16 @@ const cspDirectives = {
   mediaSrc: ["'self'"]
 };
 
+// Convert CSP object to string format
+const generateCspString = () => {
+  return Object.entries(cspDirectives)
+    .map(([key, values]) => {
+      const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+      return `${kebabKey} ${values.join(' ')}`;
+    })
+    .join('; ');
+};
+
 // Monkey patch the http.ServerResponse prototype to intercept all setHeader calls
 // This ensures our CSP is never overridden
 const originalSetHeader = http.ServerResponse.prototype.setHeader;
@@ -41,14 +51,7 @@ http.ServerResponse.prototype.setHeader = function(name, value) {
     // Fix for TypeScript error - check if value is a string before using includes
     if (typeof value === 'string' && value.includes("default-src 'none'")) {
       // Replace any restrictive CSP with our custom one
-      const cspString = Object.entries(cspDirectives)
-        .map(([key, values]) => {
-          const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-          return `${kebabKey} ${values.join(' ')}`;
-        })
-        .join('; ');
-      
-      return originalSetHeader.call(this, name, cspString);
+      return originalSetHeader.call(this, name, generateCspString());
     }
   }
   
@@ -70,14 +73,7 @@ app.use(
 // Remove any other middleware that might override CSP
 app.use((req, res, next) => {
   // Force our CSP to be set
-  const cspString = Object.entries(cspDirectives)
-    .map(([key, values]) => {
-      const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-      return `${kebabKey} ${values.join(' ')}`;
-    })
-    .join('; ');
-  
-  res.setHeader('Content-Security-Policy', cspString);
+  res.setHeader('Content-Security-Policy', generateCspString());
   
   // Monkey patch res.setHeader for this request
   const originalResSetHeader = res.setHeader;
@@ -85,7 +81,7 @@ app.use((req, res, next) => {
     if (name.toLowerCase() === 'content-security-policy') {
       // Fix for TypeScript error - check if value is a string before using includes
       if (typeof value === 'string' && value.includes("default-src 'none'")) {
-        return originalResSetHeader.call(this, name, cspString);
+        return originalResSetHeader.call(this, name, generateCspString());
       }
     }
     return originalResSetHeader.call(this, name, value);
@@ -99,7 +95,7 @@ app.use((req, res, next) => {
     // Fix for TypeScript error - check if currentCsp is a string before using includes
     if (!currentCsp || 
         (typeof currentCsp === 'string' && currentCsp.includes("default-src 'none'"))) {
-      res.setHeader('Content-Security-Policy', cspString);
+      res.setHeader('Content-Security-Policy', generateCspString());
     }
     return originalSend.call(this, body);
   };
@@ -265,50 +261,21 @@ app.use('/api', router);
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../../dist');
   
-  // Custom middleware to preserve CSP when serving static files
-  const serveStaticWithCsp = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    // Ensure our CSP header is set
-    const cspString = Object.entries(cspDirectives)
-      .map(([key, values]) => {
-        const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-        return `${kebabKey} ${values.join(' ')}`;
-      })
-      .join('; ');
-    
-    res.setHeader('Content-Security-Policy', cspString);
-    
-    next();
-  };
-  
-  // Apply our middleware before serving static files
-  app.use(serveStaticWithCsp);
-  
-  // Serve static files
-  app.use(express.static(distPath, {
+  // Use express-static-gzip for serving compressed static files
+  app.use(expressStaticGzip(distPath, {
+    enableBrotli: true,
+    orderPreference: ['br', 'gz'],
+    index: false, // Disable default index behavior
     setHeaders: (res) => {
-      // Set CSP header for each static file
-      const cspString = Object.entries(cspDirectives)
-        .map(([key, values]) => {
-          const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-          return `${kebabKey} ${values.join(' ')}`;
-        })
-        .join('; ');
-      
-      res.setHeader('Content-Security-Policy', cspString);
+      // Set our custom CSP header
+      res.setHeader('Content-Security-Policy', generateCspString());
     }
   }));
   
   // Handle SPA routing - serve index.html for any unmatched routes
   app.get('*', (req, res) => {
     // Set CSP header before sending index.html
-    const cspString = Object.entries(cspDirectives)
-      .map(([key, values]) => {
-        const kebabKey = key.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-        return `${kebabKey} ${values.join(' ')}`;
-      })
-      .join('; ');
-    
-    res.setHeader('Content-Security-Policy', cspString);
+    res.setHeader('Content-Security-Policy', generateCspString());
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
@@ -336,3 +303,4 @@ if (require.main === module) {
 
 // Export the Express app for production use
 export default app;
+
