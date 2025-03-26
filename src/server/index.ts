@@ -1,3 +1,4 @@
+
 import express from 'express';
 import { json, urlencoded } from 'express';
 import cors from 'cors';
@@ -41,14 +42,13 @@ const generateCspString = () => {
     .join('; ');
 };
 
-// Monkey patch the http.ServerResponse prototype to intercept all setHeader calls
-// This ensures our CSP is never overridden
+// Monkey patch the http.ServerResponse prototype to intercept all setHeader calls globally
+// This ensures our CSP is never overridden by any middleware
 const originalSetHeader = http.ServerResponse.prototype.setHeader;
 
 http.ServerResponse.prototype.setHeader = function(name, value) {
   // Only intercept Content-Security-Policy headers
   if (name.toLowerCase() === 'content-security-policy') {
-    // Fix for TypeScript error - check if value is a string before using includes
     if (typeof value === 'string' && value.includes("default-src 'none'")) {
       // Replace any restrictive CSP with our custom one
       return originalSetHeader.call(this, name, generateCspString());
@@ -75,7 +75,7 @@ app.use((req, res, next) => {
   // Force our CSP to be set
   res.setHeader('Content-Security-Policy', generateCspString());
   
-  // Monkey patch res.setHeader for this request
+  // Override the setHeader method for this request
   const originalResSetHeader = res.setHeader;
   res.setHeader = function(name, value) {
     if (name.toLowerCase() === 'content-security-policy') {
@@ -87,10 +87,10 @@ app.use((req, res, next) => {
     return originalResSetHeader.call(this, name, value);
   };
   
-  // Monkey patch res.send to ensure CSP is set before sending
+  // Monkey patch res.send for this request
   const originalSend = res.send;
   res.send = function(body) {
-    // Ensure our CSP is set
+    // Ensure our CSP is set before sending
     const currentCsp = res.getHeader('Content-Security-Policy');
     // Fix for TypeScript error - check if currentCsp is a string before using includes
     if (!currentCsp || 
@@ -262,15 +262,18 @@ if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../../dist');
   
   // Use express-static-gzip for serving compressed static files
+  // Fix: Use correct TypeScript interface for expressStaticGzip options
   app.use(expressStaticGzip(distPath, {
     enableBrotli: true,
     orderPreference: ['br', 'gz'],
-    index: false, // Disable default index behavior
-    setHeaders: (res) => {
-      // Set our custom CSP header
-      res.setHeader('Content-Security-Policy', generateCspString());
-    }
+    index: false // Disable default index behavior
   }));
+  
+  // Apply CSP headers after the static middleware
+  app.use((req, res, next) => {
+    res.setHeader('Content-Security-Policy', generateCspString());
+    next();
+  });
   
   // Handle SPA routing - serve index.html for any unmatched routes
   app.get('*', (req, res) => {
@@ -303,4 +306,3 @@ if (require.main === module) {
 
 // Export the Express app for production use
 export default app;
-

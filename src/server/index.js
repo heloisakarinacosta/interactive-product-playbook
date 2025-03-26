@@ -1,3 +1,4 @@
+
 import express from 'express';
 import cors from 'cors';
 import pkg from 'mysql2';
@@ -278,16 +279,19 @@ if (process.env.NODE_ENV === 'production') {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const distPath = path.join(__dirname, '../../../dist');
   
-  // Use express-static-gzip instead of regular static middleware
+  // Use express-static-gzip for serving compressed static files
+  // Fix: Remove setHeaders property to match TypeScript interface
   app.use(expressStaticGzip(distPath, {
     enableBrotli: true,
     orderPreference: ['br', 'gz'],
-    index: false, // Disable default index behavior
-    setHeaders: (res) => {
-      // Set our custom CSP header
-      res.setHeader('Content-Security-Policy', generateCspString());
-    }
+    index: false // Disable default index behavior
   }));
+  
+  // Apply CSP headers after the static middleware
+  app.use((req, res, next) => {
+    res.setHeader('Content-Security-Policy', generateCspString());
+    next();
+  });
   
   // Handle SPA routing - serve index.html for any unmatched routes
   app.get('*', (req, res) => {

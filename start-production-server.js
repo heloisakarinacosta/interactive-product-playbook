@@ -239,12 +239,14 @@ const distPath = join(__dirname, 'dist');
 app.use(expressStaticGzip(distPath, {
   enableBrotli: true,
   orderPreference: ['br', 'gz'],
-  index: false,
-  setHeaders: (res) => {
-    // Set our custom CSP header
-    res.setHeader('Content-Security-Policy', generateCspString());
-  }
+  index: false // Remove setHeaders property to fix TypeScript error
 }));
+
+// Apply CSP headers after the static middleware
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', generateCspString());
+  next();
+});
 
 // Handle SPA routing
 app.get('*', (req, res) => {
