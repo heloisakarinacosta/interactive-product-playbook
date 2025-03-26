@@ -27,10 +27,10 @@ app.use(
         fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"]
       }
     },
-    // Other security headers
-    xContentTypeOptions: { noSniff: true },
-    xFrameOptions: { action: 'deny' },
-    xXssProtection: { enabled: true, mode: 'block' }
+    // Fix the TypeScript errors by using correct types for these properties
+    xContentTypeOptions: true,  // Instead of { noSniff: true }
+    xFrameOptions: true,       // Instead of { action: 'deny' }
+    xXssProtection: true       // Instead of { enabled: true, mode: 'block' }
   })
 );
 

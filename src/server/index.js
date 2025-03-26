@@ -52,9 +52,10 @@ app.use(
         fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"]
       }
     },
-    xContentTypeOptions: { noSniff: true },
-    xFrameOptions: { action: 'deny' },
-    xXssProtection: { enabled: true, mode: 'block' }
+    // Use boolean values instead of objects for simplicity
+    xContentTypeOptions: true,
+    xFrameOptions: true,
+    xXssProtection: true
   })
 );
 
