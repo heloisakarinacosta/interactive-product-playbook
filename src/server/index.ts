@@ -20,16 +20,17 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        connectSrc: ["'self'", "http://191.232.33.131:3000", "http://localhost:3000", "https://my.productfruits.com", "https://edge.microsoft.com"],
-        imgSrc: ["'self'", "https://my.productfruits.com", "data:"],
         scriptSrc: ["'self'", "https://cdn.gpteng.co", "'unsafe-inline'", "'unsafe-eval'"],
+        connectSrc: ["'self'", "http://191.232.33.131:3000", "http://localhost:3000", "https://my.productfruits.com", "https://edge.microsoft.com", "wss://my.productfruits.com"],
+        imgSrc: ["'self'", "https://my.productfruits.com", "data:"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"]
+        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+        frameSrc: ["'self'", "https://my.productfruits.com"]
       }
     },
     // Fix the TypeScript errors by using correct types for these properties
     xContentTypeOptions: true,  // Instead of { noSniff: true }
-    xFrameOptions: true,       // Instead of { action: 'deny' }
+    xFrameOptions: false,      // Alterando para false para permitir iframe de productfruits
     xXssProtection: true       // Instead of { enabled: true, mode: 'block' }
   })
 );
