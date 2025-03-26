@@ -38,12 +38,23 @@ const ProductsPage = () => {
   
   // Fetch products
   const { 
-    data: products = [], 
-    isLoading: isLoadingProducts 
+    data: productsData = [], 
+    isLoading: isLoadingProducts,
+    error: productsError
   } = useQuery({
     queryKey: ['products'],
     queryFn: fetchProducts,
   });
+  
+  // Ensure products is always an array
+  const products = Array.isArray(productsData) ? productsData : [];
+  
+  // Log any errors for debugging
+  useEffect(() => {
+    if (productsError) {
+      console.error('Products query error:', productsError);
+    }
+  }, [productsError]);
   
   // Fetch items for selected product
   const { 
