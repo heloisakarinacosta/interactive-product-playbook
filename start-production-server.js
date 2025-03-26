@@ -1,5 +1,4 @@
 
-#!/usr/bin/env node
 import express from 'express';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';

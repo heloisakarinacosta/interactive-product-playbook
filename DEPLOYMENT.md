@@ -8,12 +8,7 @@
    npm run build
    ```
 
-2. Compile os arquivos TypeScript do servidor:
-   ```
-   npm run build:server
-   ```
-
-3. Inicie o servidor de produção:
+2. Inicie o servidor de produção:
    ```
    node start-production-server.js
    ```
@@ -69,7 +64,6 @@
 8. Construa e inicie:
    ```
    npm run build
-   npm run build:server
    node start-production-server.js
    ```
 
