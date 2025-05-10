@@ -1,5 +1,5 @@
 
-import mysql from 'mysql2/promise';
+import mysql, { ResultSetHeader } from 'mysql2/promise';
 import { dbConfig } from '../config/db.config';
 
 // Create connection pool
@@ -169,7 +169,7 @@ export const testConnection = async () => {
   }
 };
 
-// Query helper function
+// Query helper function - updated to handle both ResultSetHeader and other return types
 export const query = async (sql: string, params?: any[]) => {
   try {
     const [rows] = await pool.query(sql, params);

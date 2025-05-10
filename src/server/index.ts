@@ -6,6 +6,7 @@ import { query, initDatabase } from '../utils/dbUtils';
 import path from 'path';
 import helmet from 'helmet';
 import fs from 'fs';
+import { ResultSetHeader } from 'mysql2';
 
 // Create Express application
 const app = express();
@@ -68,7 +69,10 @@ router.post('/products', async (req, res) => {
       [title, description]
     );
     
-    const newProductId = result.insertId;
+    // Fix: Type assertion to handle ResultSetHeader
+    const insertResult = result as unknown as ResultSetHeader;
+    const newProductId = insertResult.insertId;
+    
     const newProduct = await query('SELECT * FROM products WHERE id = ?', [newProductId]);
     
     res.status(201).json(Array.isArray(newProduct) ? newProduct[0] : newProduct);
@@ -119,7 +123,10 @@ router.post('/items', async (req, res) => {
       [product_id, title]
     );
     
-    const newItemId = result.insertId;
+    // Fix: Type assertion to handle ResultSetHeader
+    const insertResult = result as unknown as ResultSetHeader;
+    const newItemId = insertResult.insertId;
+    
     const newItem = await query('SELECT * FROM items WHERE id = ?', [newItemId]);
     
     res.status(201).json(Array.isArray(newItem) ? newItem[0] : newItem);
@@ -152,7 +159,10 @@ router.post('/subitems', async (req, res) => {
       [item_id, title, subtitle, description, last_updated_by]
     );
     
-    const newSubitemId = result.insertId;
+    // Fix: Type assertion to handle ResultSetHeader
+    const insertResult = result as unknown as ResultSetHeader;
+    const newSubitemId = insertResult.insertId;
+    
     const newSubitem = await query('SELECT * FROM subitems WHERE id = ?', [newSubitemId]);
     
     res.status(201).json(Array.isArray(newSubitem) ? newSubitem[0] : newSubitem);
