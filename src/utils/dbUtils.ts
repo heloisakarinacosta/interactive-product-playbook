@@ -1,7 +1,8 @@
+
 import mysql from 'mysql2/promise';
 import { dbConfig } from '../config/db.config';
 
-// Create connection pool com configurações mais seguras para MariaDB 11.4
+// Create connection pool
 const pool = mysql.createPool({
   host: dbConfig.host,
   user: dbConfig.user,
@@ -17,6 +18,13 @@ const pool = mysql.createPool({
 export const initDatabase = async () => {
   try {
     console.log('Tentando inicializar o banco de dados...');
+    console.log('Configuração:', {
+      host: dbConfig.host,
+      user: dbConfig.user,
+      database: dbConfig.database,
+      port: dbConfig.port
+    });
+    
     // Teste de conexão antes de prosseguir
     const connection = await pool.getConnection();
     console.log('Conexão bem-sucedida!');
@@ -26,19 +34,28 @@ export const initDatabase = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        username VARCHAR(255) NOT NULL UNIQUE,
-        password VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        password VARCHAR(255) DEFAULT NULL,
+        is_admin BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        UNIQUE KEY (email)
       );
+    `);
+
+    await query(`
+      INSERT INTO users (email, password, is_admin) 
+      VALUES ('admin', MD5('01928374'), TRUE)
+      ON DUPLICATE KEY UPDATE password = MD5('01928374'), is_admin = TRUE;
     `);
 
     await query(`
       CREATE TABLE IF NOT EXISTS access_logs (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
+        user_id INT,
+        email VARCHAR(255),
+        ip_address VARCHAR(45),
+        accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
       );
     `);
 
@@ -119,6 +136,7 @@ export const initDatabase = async () => {
     `);
 
     console.log('✅ Tabelas criadas com sucesso!');
+    return true;
   } catch (error) {
     console.error('Error initializing database:', error);
     throw error;
@@ -146,6 +164,7 @@ export const testConnection = async () => {
     return true;
   } catch (error) {
     console.error('❌ Erro ao conectar com o banco de dados:', error);
+    console.error('Detalhes:', error instanceof Error ? error.message : String(error));
     return false;
   }
 };

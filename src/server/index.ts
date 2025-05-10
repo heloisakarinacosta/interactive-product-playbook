@@ -1,10 +1,8 @@
-// Modificações no arquivo index.ts
 
 import express from 'express';
 import { json, urlencoded } from 'express';
 import cors from 'cors';
 import { query, initDatabase } from '../utils/dbUtils';
-import { ResultSetHeader } from 'mysql2';
 import path from 'path';
 import helmet from 'helmet';
 import fs from 'fs';
@@ -12,7 +10,7 @@ import fs from 'fs';
 // Create Express application
 const app = express();
 
-// Definir CSP directives simplificados e abrangentes
+// Definir CSP directives
 const cspDirectives = {
   defaultSrc: ["'self'"],
   scriptSrc: ["'self'", "https://cdn.gpteng.co", "'unsafe-inline'", "'unsafe-eval'", "https://my.productfruits.com"],
@@ -32,7 +30,7 @@ const cspDirectives = {
   mediaSrc: ["'self'"]
 };
 
-// Usar Helmet corretamente
+// Usar Helmet com CSP configurado
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -47,11 +45,140 @@ app.use(cors());
 app.use(json());
 app.use(urlencoded({ extended: true }));
 
-// Criar router e definir rotas API
+// Criar router para API
 const router = express.Router();
 
-// (Manter todas as rotas API existentes)
-// ...
+// API routes
+// Products routes
+router.get('/products', async (req, res) => {
+  try {
+    const products = await query('SELECT * FROM products ORDER BY updated_at DESC');
+    res.json(products);
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
+router.post('/products', async (req, res) => {
+  try {
+    const { title, description } = req.body;
+    const result = await query(
+      'INSERT INTO products (title, description) VALUES (?, ?)',
+      [title, description]
+    );
+    
+    const newProductId = result.insertId;
+    const newProduct = await query('SELECT * FROM products WHERE id = ?', [newProductId]);
+    
+    res.status(201).json(Array.isArray(newProduct) ? newProduct[0] : newProduct);
+  } catch (error) {
+    console.error('Error creating product:', error);
+    res.status(500).json({ error: 'Failed to create product' });
+  }
+});
+
+router.put('/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description } = req.body;
+    
+    await query(
+      'UPDATE products SET title = ?, description = ? WHERE id = ?',
+      [title, description, id]
+    );
+    
+    const updated = await query('SELECT * FROM products WHERE id = ?', [id]);
+    res.json(Array.isArray(updated) ? updated[0] : updated);
+  } catch (error) {
+    console.error('Error updating product:', error);
+    res.status(500).json({ error: 'Failed to update product' });
+  }
+});
+
+// Items routes
+router.get('/items/:productId', async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const items = await query(
+      'SELECT * FROM items WHERE product_id = ? ORDER BY created_at DESC',
+      [productId]
+    );
+    res.json(items);
+  } catch (error) {
+    console.error('Error fetching items:', error);
+    res.status(500).json({ error: 'Failed to fetch items' });
+  }
+});
+
+router.post('/items', async (req, res) => {
+  try {
+    const { title, product_id } = req.body;
+    const result = await query(
+      'INSERT INTO items (product_id, title) VALUES (?, ?)',
+      [product_id, title]
+    );
+    
+    const newItemId = result.insertId;
+    const newItem = await query('SELECT * FROM items WHERE id = ?', [newItemId]);
+    
+    res.status(201).json(Array.isArray(newItem) ? newItem[0] : newItem);
+  } catch (error) {
+    console.error('Error creating item:', error);
+    res.status(500).json({ error: 'Failed to create item' });
+  }
+});
+
+// Subitems routes
+router.get('/subitems/:itemId', async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const subitems = await query(
+      'SELECT * FROM subitems WHERE item_id = ? ORDER BY created_at DESC',
+      [itemId]
+    );
+    res.json(subitems);
+  } catch (error) {
+    console.error('Error fetching subitems:', error);
+    res.status(500).json({ error: 'Failed to fetch subitems' });
+  }
+});
+
+router.post('/subitems', async (req, res) => {
+  try {
+    const { item_id, title, subtitle, description, last_updated_by } = req.body;
+    const result = await query(
+      'INSERT INTO subitems (item_id, title, subtitle, description, last_updated_by) VALUES (?, ?, ?, ?, ?)',
+      [item_id, title, subtitle, description, last_updated_by]
+    );
+    
+    const newSubitemId = result.insertId;
+    const newSubitem = await query('SELECT * FROM subitems WHERE id = ?', [newSubitemId]);
+    
+    res.status(201).json(Array.isArray(newSubitem) ? newSubitem[0] : newSubitem);
+  } catch (error) {
+    console.error('Error creating subitem:', error);
+    res.status(500).json({ error: 'Failed to create subitem' });
+  }
+});
+
+router.put('/subitems/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, subtitle, description, last_updated_by } = req.body;
+    
+    await query(
+      'UPDATE subitems SET title = ?, subtitle = ?, description = ?, last_updated_by = ? WHERE id = ?',
+      [title, subtitle, description, last_updated_by, id]
+    );
+    
+    const updated = await query('SELECT * FROM subitems WHERE id = ?', [id]);
+    res.json(Array.isArray(updated) ? updated[0] : updated);
+  } catch (error) {
+    console.error('Error updating subitem:', error);
+    res.status(500).json({ error: 'Failed to update subitem' });
+  }
+});
 
 // Usar o router para /api
 app.use('/api', router);
@@ -84,7 +211,7 @@ if (process.env.NODE_ENV === 'production') {
 
 // Inicializar DB e iniciar servidor apenas se este for o módulo principal
 if (require.main === module) {
-  const PORT = process.env.PORT || 3000; // Usando porta 3000 consistentemente
+  const PORT = process.env.PORT || 3000;
   
   initDatabase()
     .then(() => {

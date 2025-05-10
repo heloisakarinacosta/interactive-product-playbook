@@ -1,9 +1,9 @@
 
 // Database connection configuration for MariaDB
 export const dbConfig = {
-  host: process.env.DB_HOST || '127.0.0.1', // Alterado de 'localhost' para '127.0.0.1'
+  host: process.env.DB_HOST || '127.0.0.1',
   user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',  // Set your database password here
+  password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'playbook_produtos',
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306
 };
